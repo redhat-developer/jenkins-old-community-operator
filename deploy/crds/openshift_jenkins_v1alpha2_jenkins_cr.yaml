@@ -3,14 +3,23 @@ kind: Jenkins
 metadata:
   name: jenkins
 spec:
+  jenkinsAPIConnectionSettings:
+    useNodePort: true
+  jenkinsAPISettings:
+    authorizationStrategy: serviceAccount
+  roles:
+    - name: admin
+      kind: ClusterRole
+      apiGroup: "rbac.authorization.k8s.io"
   master:
+    disableCSRFProtection: true
     containers:
-    - name: jenkins-master
-      image: quay.io/openshift/origin-jenkins:latest
-      resources:
-        limits:
-          cpu: 1500m
-          memory: 3Gi
-        requests:
-          cpu: "1"
-          memory: 500Mi
+      - name: jenkins-master
+        image: quay.io/openshift/origin-jenkins
+        imagePullPolicy: Always
+        command:
+          - "bash"
+          - "-c"
+          - "/var/jenkins/scripts/init.sh && exec /usr/bin/go-init -main /usr/libexec/s2i/run"
+
+
