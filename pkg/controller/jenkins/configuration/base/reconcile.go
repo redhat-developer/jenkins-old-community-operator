@@ -5,7 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/kubernetes"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"strings"
 	"time"
 
@@ -23,6 +27,7 @@ import (
 
 	"github.com/bndr/gojenkins"
 	"github.com/go-logr/logr"
+	routev1 "github.com/openshift/api/route/v1"
 	stackerr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -173,6 +178,26 @@ func (r *ReconcileJenkinsBaseConfiguration) ensureResourcesRequiredForJenkinsPod
 	}
 	r.logger.V(log.VDebug).Info("ConfigurationAsCode Secret and ConfigMap added watched labels")
 
+	if err := r.createService(metaObject, resources.GetJenkinsHTTPServiceName(&metaObject), r.Configuration.Jenkins.Spec.Service); err != nil {
+		return err
+	}
+	r.logger.V(log.VDebug).Info("Jenkins HTTP Service is present")
+	if err := r.createService(metaObject, resources.GetJenkinsSlavesServiceName(&metaObject), r.Configuration.Jenkins.Spec.SlaveService); err != nil {
+		return err
+	}
+	r.logger.V(log.VDebug).Info("Jenkins slave Service is present")
+
+	routeApiExists, err := r.verifyAPI(routev1.GroupName, routev1.SchemeGroupVersion.Version)
+	if err != nil {
+		return err
+	}
+	if routeApiExists {
+		if err := r.createRoute(metaObject, resources.GetJenkinsHTTPServiceName(&metaObject), r.Configuration.Jenkins.Spec.Service); err != nil {
+			return err
+		}
+		r.logger.V(log.VDebug).Info("Jenkins Route is present")
+	}
+
 	if err := r.createRBAC(metaObject); err != nil {
 		return err
 	}
@@ -183,16 +208,33 @@ func (r *ReconcileJenkinsBaseConfiguration) ensureResourcesRequiredForJenkinsPod
 	}
 	r.logger.V(log.VDebug).Info("Extra role bindings are present")
 
-	if err := r.createService(metaObject, resources.GetJenkinsHTTPServiceName(r.Configuration.Jenkins), r.Configuration.Jenkins.Spec.Service); err != nil {
-		return err
-	}
-	r.logger.V(log.VDebug).Info("Jenkins HTTP Service is present")
-	if err := r.createService(metaObject, resources.GetJenkinsSlavesServiceName(r.Configuration.Jenkins), r.Configuration.Jenkins.Spec.SlaveService); err != nil {
-		return err
-	}
-	r.logger.V(log.VDebug).Info("Jenkins slave Service is present")
-
 	return nil
+}
+
+// VerifyAPI will verify that the given group/version is present in the cluster.
+func (r *ReconcileJenkinsBaseConfiguration) verifyAPI(group string, version string) (bool, error) {
+	cfg, err := config.GetConfig()
+	if err != nil {
+		r.logger.Error(err, "unable to get k8s config")
+		return false, err
+	}
+
+	k8s, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		r.logger.Error(err, "unable to create k8s client")
+		return false, err
+	}
+
+	gv := schema.GroupVersion{
+		Group:   group,
+		Version: version,
+	}
+
+	if err = discovery.ServerSupportsVersion(k8s, gv); err != nil {
+		// error, API not available
+		return false, nil
+	}
+	return true, nil
 }
 
 func (r *ReconcileJenkinsBaseConfiguration) verifyPlugins(jenkinsClient jenkinsclient.Jenkins) (bool, error) {
@@ -344,7 +386,18 @@ func (r *ReconcileJenkinsBaseConfiguration) createServiceAccount(meta metav1.Obj
 	serviceAccount := &corev1.ServiceAccount{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: meta.Name, Namespace: meta.Namespace}, serviceAccount)
 	if err != nil && apierrors.IsNotFound(err) {
-		serviceAccount = resources.NewServiceAccount(meta, r.Configuration.Jenkins.Spec.ServiceAccount.Annotations)
+		routeApiExists, err := r.verifyAPI(routev1.GroupName, routev1.SchemeGroupVersion.Version)
+		annotations := r.Configuration.Jenkins.Spec.ServiceAccount.Annotations
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		if routeApiExists && err == nil {
+			serviceName := resources.GetJenkinsHTTPServiceName(&meta)
+			aKey := "serviceaccounts.openshift.io/oauth-redirecturi.jenkins"
+			aValue := fmt.Sprintf("{\"kind\":\"OAuthRedirectReference\",\"apiVersion\":\"v1\",\"reference\":{\"kind\":\"Route\",\"name\":\"%s\"}}", serviceName)
+			annotations[aKey] = aValue
+		}
+		serviceAccount = resources.NewServiceAccount(meta, annotations)
 		if err = r.CreateResource(serviceAccount); err != nil {
 			return stackerr.WithStack(err)
 		}
@@ -388,6 +441,20 @@ func (r *ReconcileJenkinsBaseConfiguration) createRBAC(meta metav1.ObjectMeta) e
 	if err != nil {
 		return stackerr.WithStack(err)
 	}
+	routeApiExists, err := r.verifyAPI(routev1.GroupName, routev1.SchemeGroupVersion.Version)
+	if routeApiExists && err == nil {
+		roleRef := rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "edit",
+		}
+		roleName := getExtraRoleBindingName(meta.Name, roleRef)
+		roleBindingEditCR := resources.NewRoleBinding(roleName, meta.Namespace, meta.Name, roleRef)
+		err = r.CreateOrUpdateResource(roleBindingEditCR)
+		if err != nil {
+			return stackerr.WithStack(err)
+		}
+	}
 
 	return nil
 }
@@ -424,10 +491,14 @@ func (r *ReconcileJenkinsBaseConfiguration) ensureExtraRBAC(meta metav1.ObjectMe
 			}
 		}
 		if !found {
-			r.logger.Info(fmt.Sprintf("Deleting RoleBinding '%s'", roleBinding.Name))
-			if err = r.Client.Delete(context.TODO(), &roleBinding); err != nil {
-				return stackerr.WithStack(err)
-			}
+			// Part of upstream
+			//r.logger.Info(fmt.Sprintf("Deleting RoleBinding '%s'", roleBinding.Name))
+			//if err = r.Client.Delete(context.TODO(), &roleBinding); err != nil {
+			//	return stackerr.WithStack(err)
+			//}
+
+			// edit
+			continue
 		}
 	}
 
@@ -468,6 +539,34 @@ func (r *ReconcileJenkinsBaseConfiguration) createService(meta metav1.ObjectMeta
 	service.Spec.Selector = meta.Labels // make sure that user won't break service by hand
 	service = resources.UpdateService(service, config)
 	return stackerr.WithStack(r.UpdateResource(&service))
+}
+
+func (r *ReconcileJenkinsBaseConfiguration) createRoute(meta metav1.ObjectMeta, name string, config v1alpha2.Service) error {
+
+	route := routev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:name,
+		},
+		Spec: routev1.RouteSpec{
+			TLS: &routev1.TLSConfig{
+				Termination:                   routev1.TLSTerminationEdge,
+				InsecureEdgeTerminationPolicy: routev1.InsecureEdgeTerminationPolicyRedirect,
+			},
+			To: routev1.RouteTargetReference{
+				Kind: "Service",
+				Name: name,
+			},
+		},
+	}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: meta.Namespace}, &route)
+	if err != nil && apierrors.IsNotFound(err) {
+		if err = r.CreateResource(&route); err != nil {
+			return nil
+		}
+	} else if err != nil {
+		return stackerr.WithStack(err)
+	}
+	return stackerr.WithStack(r.UpdateResource(&route))
 }
 
 func (r *ReconcileJenkinsBaseConfiguration) getJenkinsMasterPod() (*corev1.Pod, error) {
@@ -951,10 +1050,10 @@ func (r *ReconcileJenkinsBaseConfiguration) ensureJenkinsClient() (jenkinsclient
 
 func (r *ReconcileJenkinsBaseConfiguration) getJenkinsAPIUrl() (string, error) {
 	var service corev1.Service
-
+	objectMeta := r.Configuration.Jenkins.ObjectMeta
 	err := r.Client.Get(context.TODO(), types.NamespacedName{
-		Namespace: r.Configuration.Jenkins.ObjectMeta.Namespace,
-		Name:      resources.GetJenkinsHTTPServiceName(r.Configuration.Jenkins),
+		Namespace: objectMeta.Namespace,
+		Name:      resources.GetJenkinsHTTPServiceName(&objectMeta),
 	}, &service)
 
 	if err != nil {

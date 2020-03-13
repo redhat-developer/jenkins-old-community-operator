@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"time"
 
+	routev1 "github.com/openshift/api/route/v1"
+
 	"github.com/jenkinsci/kubernetes-operator/pkg/apis/jenkins/v1alpha2"
 	jenkinsclient "github.com/jenkinsci/kubernetes-operator/pkg/controller/jenkins/client"
 	"github.com/jenkinsci/kubernetes-operator/pkg/controller/jenkins/configuration"
@@ -101,6 +103,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{TypeMeta: metav1.TypeMeta{APIVersion: "core/v1", Kind: "ConfigMap"}}}, jenkinsHandler)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	err = c.Watch(&source.Kind{Type: &routev1.Route{TypeMeta: metav1.TypeMeta{APIVersion: "route/v1", Kind: "Route"}}}, jenkinsHandler)
 	if err != nil {
 		return errors.WithStack(err)
 	}

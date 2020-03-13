@@ -12,32 +12,35 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.1
-	github.com/go-openapi/spec v0.19.4
-	github.com/gogo/protobuf v1.3.1
-	github.com/golang/mock v1.3.1
+	github.com/go-openapi/spec v0.19.0
+	github.com/gogo/protobuf v1.3.1 // indirect
+	github.com/golang/mock v1.2.0
+	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/mailgun/mailgun-go/v3 v3.6.0
-	github.com/operator-framework/operator-sdk v0.15.1
-	github.com/pborman/uuid v1.2.0
+	github.com/openshift/api v3.9.0+incompatible
+	github.com/operator-framework/operator-sdk v0.8.2-0.20190522220659-031d71ef8154
 	github.com/pkg/errors v0.8.1
 	github.com/robfig/cron v1.2.0
-	github.com/sirupsen/logrus v1.4.2
-	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.4.0
-	go.uber.org/zap v1.10.0
-	golang.org/x/net v0.0.0-20191028085509-fe3aa8a45271
-	golang.org/x/tools v0.0.0-20200210192313-1ace956b0e17 // indirect
+	github.com/spf13/pflag v1.0.3
+	github.com/stretchr/testify v1.3.0
+	go.uber.org/zap v1.9.1
+	golang.org/x/crypto v0.0.0-20190909091759-094676da4a83 // indirect
+	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
+	golang.org/x/sys v0.0.0-20190910064555-bbd175535a8b // indirect
+	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/tools v0.0.0-20191004055002-72853e10c5a3 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
-	k8s.io/api v0.0.0
-	k8s.io/apiextensions-apiserver v0.0.0
-	k8s.io/apimachinery v0.0.0
-	k8s.io/cli-runtime v0.0.0
-	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/code-generator v0.0.0
-	k8s.io/gengo v0.0.0-20191010091904-7fa3014cb28f
-	k8s.io/kube-openapi v0.0.0-20190918143330-0270cf2f1c1d
-	sigs.k8s.io/controller-runtime v0.4.0
-	sigs.k8s.io/controller-tools v0.2.4
+	k8s.io/api v0.17.4
+	k8s.io/apimachinery v0.17.4
+	k8s.io/cli-runtime v0.0.0-20181213153952-835b10687cb6
+	k8s.io/client-go v11.0.0+incompatible
+	k8s.io/code-generator v0.0.0-20181203235156-f8cba74510f3
+	k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a
+	k8s.io/klog v1.0.0 // indirect
+	k8s.io/kube-openapi v0.0.0-20190320154901-5e45bb682580
+	sigs.k8s.io/controller-runtime v0.1.10
+	sigs.k8s.io/controller-tools v0.1.10
 )
 
 // Pinned to kubernetes-1.16.2

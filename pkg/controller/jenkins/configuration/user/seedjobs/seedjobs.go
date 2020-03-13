@@ -413,8 +413,14 @@ func agentDeployment(jenkins *v1alpha2.Jenkins, namespace string, agentName stri
 							Env: []corev1.EnvVar{
 								{
 									Name: "JENKINS_TUNNEL",
+<<<<<<< HEAD
 									Value: fmt.Sprintf("%s:%d",
 										jenkinsSlavesServiceFQDN,
+=======
+									Value: fmt.Sprintf("%s.%s:%d",
+										resources.GetJenkinsSlavesServiceName(&jenkins.ObjectMeta),
+										jenkins.ObjectMeta.Namespace,
+>>>>>>> feat(pkg) Support creation of Openshift Routes
 										jenkins.Spec.SlaveService.Port),
 								},
 								{
@@ -427,8 +433,14 @@ func agentDeployment(jenkins *v1alpha2.Jenkins, namespace string, agentName stri
 								},
 								{
 									Name: "JENKINS_URL",
+<<<<<<< HEAD
 									Value: fmt.Sprintf("http://%s:%d",
 										jenkinsHttpServiceFQDN,
+=======
+									Value: fmt.Sprintf("http://%s.%s:%d",
+										resources.GetJenkinsHTTPServiceName(&jenkins.ObjectMeta),
+										jenkins.ObjectMeta.Namespace,
+>>>>>>> feat(pkg) Support creation of Openshift Routes
 										jenkins.Spec.Service.Port,
 									),
 								},
