@@ -42,6 +42,7 @@ LATEST_TAG := latest
 BUILD_TAG := $(GITBRANCH)-$(GITCOMMIT)
 
 BUILD_PATH := ./cmd/manager
+E2E_BUILD_PATH := ./test/e2e
 
 # CONTAINER_RUNTIME_COMMAND is Container Runtime - it could be docker or podman
 CONTAINER_RUNTIME_COMMAND := docker
@@ -115,7 +116,7 @@ go-dependencies: ## Ensure build dependencies
 	go mod vendor -v
 
 .PHONY: build
-build: deepcopy-gen $(NAME) ## Builds a dynamic executable or package
+build: deepcopy-gen $(NAME) build-e2e ## Builds a dynamic executable or package
 	@echo "+ $@"
 
 .PHONY: $(NAME)
@@ -157,6 +158,11 @@ endif
 test: ## Runs the go tests
 	@echo "+ $@"
 	@RUNNING_TESTS=1 go test -tags "$(BUILDTAGS) cgo" $(PACKAGES_FOR_UNIT_TESTS)
+
+.PHONY: build-e2e
+build-e2e: $(wildcard *.go) $(wildcard */*.go)
+	@echo "+ $@"
+	CGO_ENABLED=0 go build -tags "$(BUILDTAGS)" ${GO_LDFLAGS} -o build/_output/bin/jenkins-operator-e2e $(E2E_BUILD_PATH)
 
 .PHONY: e2e
 CURRENT_DIRECTORY := $(shell pwd)
