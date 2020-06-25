@@ -116,7 +116,7 @@ go-dependencies: ## Ensure build dependencies
 	go mod vendor -v
 
 .PHONY: build
-build: deepcopy-gen $(NAME) build-e2e ## Builds a dynamic executable or package
+build: deepcopy-gen $(NAME) ## Builds a dynamic executable or package
 	@echo "+ $@"
 
 .PHONY: $(NAME)
