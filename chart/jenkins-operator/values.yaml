@@ -211,8 +211,9 @@ casc:
 
   configuration:
     configurationAsCode: {}
-#    - configMapName: jenkins-casc
-#      content: {}
+#   - configMapName: jenkins-casc
+#     content: {}
+
     groovyScripts: {}
 #    - configMapName: jenkins-gs
 #      content: {}
