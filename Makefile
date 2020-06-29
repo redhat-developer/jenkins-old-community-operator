@@ -175,6 +175,9 @@ endif
 ifeq ($(KUBERNETES_PROVIDER),crc)
 	oc project $(CRC_OC_PROJECT)
 endif
+	cp deploy/crds/jenkins_$(API_VERSION)_jenkins_crd.yaml deploy/crds/jenkins_all_crd.yaml
+	cat deploy/crds/jenkins_$(API_VERSION)_jenkinsimage_crd.yaml >> deploy/crds/jenkins_all_crd.yaml
+	cat deploy/crds/jenkins_$(API_VERSION_NEXT)_casc_crd.yaml >> deploy/crds/jenkins_all_crd.yaml
 	cp deploy/service_account.yaml deploy/namespace-init.yaml
 	cat deploy/role.yaml >> deploy/namespace-init.yaml
 	cat deploy/role_binding.yaml >> deploy/namespace-init.yaml
@@ -204,7 +207,7 @@ endif
 endif
 
 	RUNNING_TESTS=1 go test -parallel=1 "./test/e2e/" -tags "$(BUILDTAGS) cgo" -v -timeout 60m -run "$(E2E_TEST_SELECTOR)" \
-		-root=$(CURRENT_DIRECTORY) -kubeconfig=$(HOME)/.kube/config -globalMan deploy/crds/jenkins_$(API_VERSION)_jenkins_crd.yaml \
+		-root=$(CURRENT_DIRECTORY) -kubeconfig=$(HOME)/.kube/config -globalMan deploy/crds/jenkins_all_crd.yaml \
 		-namespacedMan deploy/namespace-init.yaml $(TEST_ARGS)
 
 .PHONY: vet
