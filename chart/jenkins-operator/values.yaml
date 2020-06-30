@@ -210,13 +210,25 @@ casc:
   labels: {}
 
   configuration:
-    configurationAsCode: {}
-#   - configMapName: jenkins-casc
-#     content: {}
+    configurationAsCode:
+    - configMapName: jenkins-casc
+      content:
+        1-configure-theme.groovy: |
+          import jenkins.*
+          import jenkins.model.*
+          import hudson.*
+          import hudson.model.*
+          Jenkins jenkins = Jenkins.getInstance()
 
-    groovyScripts: {}
-#    - configMapName: jenkins-gs
-#      content: {}
+          jenkins.setSystemMessage("Insert your Jenkins system message here")
+          jenkins.save()
+
+    groovyScripts:
+    - configMapName: jenkins-gs
+      content:
+        1-system-message.yaml: |
+          jenkins:
+            systemMessage: "Configuration as Code integration works!!!"
 
     # secretRefName of existing secret (previously created)
     secretRefName: ""
