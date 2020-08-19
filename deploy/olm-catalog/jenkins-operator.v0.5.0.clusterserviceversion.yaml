@@ -2,25 +2,124 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
-    alm-examples: '[{"apiVersion":"jenkins.io/v1alpha2","kind":"Jenkins","metadata":{"name":"example"},"spec":{"master":{"containers":[{"image":"jenkins/jenkins:lts","imagePullPolicy":"Always","livenessProbe":{"failureThreshold":12,"httpGet":{"path":"/login","port":"http","scheme":"HTTP"},"initialDelaySeconds":80,"periodSeconds":10,"successThreshold":1,"timeoutSeconds":5},"name":"jenkins-master","readinessProbe":{"failureThreshold":3,"httpGet":{"path":"/login","port":"http","scheme":"HTTP"},"initialDelaySeconds":30,"periodSeconds":10,"successThreshold":1,"timeoutSeconds":1},"resources":{"limits":{"cpu":"1500m","memory":"3Gi"},"requests":{"cpu":"1","memory":"500Mi"}}}]},"seedJobs":[{"description":"Jenkins
-      Operator repository","id":"jenkins-operator","repositoryBranch":"master","repositoryUrl":"https://github.com/jenkinsci/kubernetes-operator.git","targets":"cicd/jobs/*.jenkins"}]}},{"apiVersion":"jenkins.io/v1alpha2","kind":"Jenkins","metadata":{"name":"jenkins"},"spec":{"master":{"containers":[{"image":"quay.io/openshift/origin-jenkins:latest","name":"jenkins-master","resources":{"limits":{"cpu":"1500m","memory":"3Gi"},"requests":{"cpu":"1","memory":"500Mi"}}}]}}}]'
+    alm-examples: |-
+      [{
+        "apiVersion": "jenkins.io/v1alpha2",
+        "kind": "Jenkins",
+        "metadata": {
+          "generation" : 1,
+          "name" : "example"
+        },
+        "spec": {
+          "backup": {
+            "action": {},
+            "containerName": "",
+            "interval": 0,
+            "makeBackupBeforePodDeletion": false
+          },
+          "configurationAsCode": {
+            "configurations": null,
+            "secret": {
+              "name": ""
+            }
+          },
+          "groovyScripts": {
+            "configurations": null,
+            "secret": {
+              "name": ""
+            }
+          },
+          "clusterRoles": [
+            {
+              "apiGroup": "rbac.authorization.k8s.io",
+              "kind": "ClusterRole",
+              "name": "edit"
+            }
+          ],
+          "master": {
+            "basePlugins": [
+              {"name": "kubernetes","version": "1.18.3"},
+              {"name": "workflow-job","version": "2.34"},
+              {"name": "workflow-aggregator","version": "2.6"},
+              {"name": "git","version": "3.12.0"},
+              {"name": "job-dsl","version": "1.76"},
+              {"name": "configuration-as-code","version": "1.29"},
+              {"name": "configuration-as-code-support","version": "1.19"},
+              {"name": "kubernetes-credentials-provider","version": "0.12.1"}
+            ],
+            "containers": [{
+              "command": ["/usr/bin/go-init","-main","/usr/libexec/s2i/run"],
+              "env": [
+                {"name": "OPENSHIFT_ENABLE_OAUTH","value": "true"},
+                {"name": "OPENSHIFT_ENABLE_REDIRECT_PROMPT","value": "true"},
+                {"name": "DISABLE_ADMINISTRATIVE_MONITORS","value": "false"},
+                {"name": "KUBERNETES_MASTER","value": "https://kubernetes.default:443"},
+                {"name": "KUBERNETES_TRUST_CERTIFICATES","value": "true"},
+                {"name": "JENKINS_SERVICE_NAME","value": "jenkins-operator-http-example"},
+                {"name": "JNLP_SERVICE_NAME","value": "jenkins-operator-slave-example"},
+                {"name": "JENKINS_UC_INSECURE","value": "false"},
+                {"name": "JENKINS_HOME","value": "/var/lib/jenkins"},
+                {"name": "JAVA_OPTS","value": "-XX:+UnlockExperimentalVMOptions -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -Djenkins.install.runSetupWizard=false -Djava.awt.headless=true"}
+              ],
+              "image": "quay.io/openshift/origin-jenkins:latest",
+              "imagePullPolicy": "Always",
+              "livenessProbe": {
+                "httpGet": {
+                  "path": "/login",
+                  "port": 8080,
+                  "scheme": "HTTP"
+                },
+                "initialDelaySeconds": 420,
+                "periodSeconds": 360,
+                "timeoutSeconds": 240
+              },
+              "name": "jenkins-master",
+              "readinessProbe": {
+                "httpGet": {
+                  "path": "/login",
+                  "port": 8080,
+                  "scheme": "HTTP"
+                },
+                "initialDelaySeconds": 3,
+                "periodSeconds": 0,
+                "timeoutSeconds": 240
+              },
+              "resources": {
+                "limits": {"cpu": "600m","memory": "4Gi"},
+                "requests": {"cpu": "500m","memory": "3Gi"}
+              }
+            }]
+            },
+            "restore": {"action": {},"containerName": ""},
+            "service": {"port": 8080,"type": "ClusterIP"},
+            "slaveService": {"port": 50000,"type": "ClusterIP"},
+            "serviceAccount": {
+              "annotations": {
+                "serviceaccounts.openshift.io/oauth-redirectreference.jenkins": "{\"kind\":\"OAuthRedirectReference\",\"apiVersion\":\"v1\",\"reference\":{\"kind\":\"Route\",\"name\":\"jenkins-example\"}}"
+              }
+            }
+          }
+        }]
     capabilities: Basic Install
     categories: Integration & Delivery
     certified: "false"
-    containerImage: virtuslab/jenkins-operator:v0.3.0
-    description: Kubernetes native operator which fully manages Jenkins on Kubernetes.
-    repository: https://github.com/jenkinsci/kubernetes-operator
-    support: VirtusLab
-  name: jenkins-operator.v0.3.0
-  namespace: placeholder
+    containerImage: quay.io/redhat-developer/openshift-jenkins-operator:0.4.1-ed5de33
+    description: >-
+      Kubernetes native operator which fully manages Jenkins on Openshift.
+    repository: https://github.com/redhat-developer/jenkins-operator
+    support: Red Hat
+  name: jenkins-operator.v0.4.1-rc3
+  namespace: placeholder 
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: Jenkins
-      displayName: Jenkins
+    - description: |+
+        Jenkins custom resource allows creation of Jenkins instances preconfigure for OpenShift.
+      displayName: "Jenkins"
       kind: Jenkins
       name: jenkins.jenkins.io
+      version: v1alpha2
       resources:
       - kind: Deployment
         name: ""
@@ -40,30 +139,46 @@ spec:
       - kind: ConfigMap
         name: ""
         version: v1
-      version: v1alpha2
   description: |+
     ##What's the Jenkins Operator?
-    Jenkins operator is a Kubernetes native operator which fully manages Jenkins on Kubernetes. It was built with immutability and declarative configuration as code in mind.
+    
+    Jenkins Operator is a Kubernetes native operator which fully manages Jenkins on Openshift. It was built with immutability and declarative configuration as code in mind.
+    It is meant to replace the Jenkins on Openshift Template as the primary source of deploying Jenkins on Openshift (https://github.com/openshift/jenkins) while also easing the Operational work necessary to manage the Jenkins Instance(s) on an Openshift Cluster.
+
 
     Out of the box it provides:
 
-    integration with Kubernetes
-    pipelines as code
-    extensibility via groovy scripts or configuration as code plugin
-    security and hardening
-    Problem statement and goals
+
+    - Integration with Kubernetes
+
+    - Pipelines as code
+
+    - Extensibility via groovy scripts or configuration as code plugin
+
+    - Security and hardening
+
+    - Problem statement and goals
+
     The main reason why we decided to implement the Jenkins Operator is the fact that we faced a lot of problems with standard Jenkins deployment. We want to make Jenkins more robust, suitable for dynamic and multi-tenant environments.
 
-    Some of the problems we want to solve:
-    installing plugins with incompatible versions or security vulnerabilities
-    better configuration as code
-    lack of end to end tests
-    handle graceful shutdown properly
-    security and hardening out of the box
-    orphaned jobs with no jnlp connection
-    make errors more visible for end users
-    backup and restore for jobs history
 
+    Some of the problems we want to solve:
+
+    - Installing plugins with incompatible versions or security vulnerabilities
+
+    - Better configuration as code
+
+    - Lack of end to end tests
+
+    - Handle graceful shutdown properly
+
+    - Security and hardening out of the box
+
+    - Orphaned jobs with no jnlp connection
+
+    - Make errors more visible for end users
+
+    - Backup and restore for jobs history
 
   displayName: Jenkins Operator
   icon:
@@ -98,100 +213,146 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: jenkins-operator
-                image: virtuslab/jenkins-operator:v0.3.0
+                image: quay.io/redhat-developer/openshift-jenkins-operator:0.4.1-ed5de33
                 imagePullPolicy: IfNotPresent
                 name: jenkins-operator
                 resources: {}
               serviceAccountName: jenkins-operator
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - '*'
+          resources:
+          - '*'
+          verbs:
+          - get
+          - list
+          - watch
+        - nonResourceURLs:
+          - '*'
+          verbs:
+          - get
+          - list
+        serviceAccountName: jenkins-operator
       permissions:
       - rules:
         - apiGroups:
           - ""
           resources:
-          - services
-          - configmaps
-          - secrets
+            - services
+            - configmaps
+            - secrets
+            - serviceaccounts
+            - endpoints
+            - bindings
+            - persistentvolumes
+            - limitranges
           verbs:
-          - get
-          - create
-          - update
-          - list
-          - watch
+            - get
+            - create
+            - update
+            - list
+            - watch
         - apiGroups:
-          - apps
+            - apps
           resources:
-          - deployments
-          - daemonsets
-          - replicasets
-          - statefulsets
+            - deployments
+            - daemonsets
+            - replicasets
+            - statefulsets
+            - controllerrevisions
           verbs:
-          - '*'
+            - '*'
         - apiGroups:
-          - ""
+            - rbac.authorization.k8s.io
           resources:
-          - serviceaccounts
+            - roles
+            - rolebindings
           verbs:
-          - create
+            - get
+            - create
+            - update
+            - list
+            - watch
         - apiGroups:
-          - rbac.authorization.k8s.io
+            - ""
           resources:
-          - roles
-          - rolebindings
+            - pods/portforward
           verbs:
-          - create
-          - update
+            - create
         - apiGroups:
-          - ""
+            - ""
           resources:
-          - pods/portforward
+            - pods/log
           verbs:
-          - create
+            - get
+            - list
+            - watch
         - apiGroups:
-          - ""
+            - ""
           resources:
-          - pods/log
+            - pods
+            - pods/exec
           verbs:
-          - get
-          - list
-          - watch
+            - "*"
         - apiGroups:
-          - ""
+            - ""
           resources:
-          - pods
-          - pods/exec
+            - events
           verbs:
-          - '*'
+            - watch
+            - list
+            - create
+            - patch
         - apiGroups:
-          - ""
-          resources:
-          - events
-          verbs:
-          - watch
-          - list
-          - create
-          - patch
-        - apiGroups:
-          - apps
+            - apps
           resourceNames:
-          - jenkins-operator
+            - jenkins-operator
           resources:
-          - deployments/finalizers
+            - deployments/finalizers
           verbs:
-          - update
+            - update
         - apiGroups:
-          - jenkins.io
+            - jenkins.io
           resources:
-          - '*'
+            - '*'
           verbs:
-          - '*'
+            - '*'
         - apiGroups:
-          - ""
+            - ""
           resources:
-          - persistentvolumeclaims
+            - persistentvolumeclaims
           verbs:
-          - get
-          - list
-          - watch
+            - get
+            - list
+            - watch
+        - apiGroups:
+            - "image.openshift.io"
+          resources:
+            - imagestreams
+          verbs:
+            - get
+            - list
+            - watch
+        - apiGroups:
+            - "build.openshift.io"
+          resources:
+            - builds
+            - buildconfigs
+          verbs:
+            - get
+            - list
+            - watch
+        - apiGroups:
+            - "route.openshift.io"
+          resources:
+            - routes
+          verbs:
+            - get
+            - create
+            - update
+            - list
+            - watch
         serviceAccountName: jenkins-operator
     strategy: deployment
   installModes:
@@ -209,18 +370,19 @@ spec:
   - CI/CD
   links:
   - name: GitHub
-    url: https://github.com/jenkinsci/kubernetes-operator
+    url: 'https://github.com/redhat-developer/jenkins-operator'
   - name: Website
-    url: https://jenkinsci.github.io/kubernetes-operator/
+    url: 'https://jenkinsci.github.io/kubernetes-operator/'
   maintainers:
-  - email: tomasz.sek.88@gmail.com
-    name: Tomasz Sęk
-  - email: jal-khalili@virtuslab.com
-    name: Jakub Al-Khalili
+    - name: Akram Ben Aissi
+      email: abenaiss@redhat.com
+    - name: Jawed Khelil
+      email: jkhelil@redhat.com
+    - name: Vibhav Bobade
+      email: vbobade@redhat.com
   maturity: alpha
   minKubeVersion: 1.11.0
   provider:
-    name: VirtusLab
-  replaces: jenkins-operator.v0.2.2
+    name: Red Hat
   selector: {}
-  version: 0.3.0
+  version: 0.5.0
