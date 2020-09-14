@@ -2,14 +2,13 @@
 apiVersion: {{ .Values.casc.apiVersion }}
 kind: Casc
 metadata:
-  annotations:
-    jenkins.io/jenkins-reference:  {{ .Values.jenkins.name }}
   name: {{ .Values.casc.name }}
   namespace: {{ .Values.jenkins.namespace }}
   {{- with .Values.casc.labels }}
   labels: {{ toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  JenkinsName: {{ .Values.jenkins.name }}
   configurationAsCode:
     configurations:
     {{- range .Values.casc.configuration.configurationAsCode }}

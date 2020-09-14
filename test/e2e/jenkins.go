@@ -55,13 +55,11 @@ func getJenkinsMasterPod(t *testing.T, jenkins *v1alpha2.Jenkins) *corev1.Pod {
 func createCascCR(t *testing.T, jenkinsCRName, name, namespace string, groovyScripts, cascConfig v1alpha3.Customization) *v1alpha3.Casc {
 	casc := &v1alpha3.Casc{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"jenkins.io/jenkins-reference": jenkinsCRName,
-			},
 			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: v1alpha3.CascSpec{
+			JenkinsName:         jenkinsCRName,
 			GroovyScripts:       groovyScripts,
 			ConfigurationAsCode: cascConfig,
 		},

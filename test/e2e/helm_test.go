@@ -59,14 +59,14 @@ func TestDeployHelmChart(t *testing.T) {
 		},
 	}
 
-	annotations := map[string]string{
-		casc.JenkinsReferenceAnnotation: jenkins.Name,
-	}
 	casc := &v1alpha3.Casc{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "casc-example",
 			Namespace:   namespace,
 			Annotations: annotations,
+		},
+		Spec: v1alpha3.CascSpec{
+			JenkinsName: jenkins.Name,
 		},
 	}
 

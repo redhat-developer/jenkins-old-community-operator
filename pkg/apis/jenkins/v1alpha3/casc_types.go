@@ -13,6 +13,9 @@ type CascSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 
+	// JenkinsName defines the jenkins instance of the casc configuration
+	JenkinsName string `json:"jenkinsName"`
+
 	// GroovyScripts defines configuration of Jenkins customization via groovy scripts
 	// +optional
 	GroovyScripts Customization `json:"groovyScripts,omitempty"`
@@ -40,7 +43,7 @@ type Customization struct {
 
 // AppliedGroovyScript is the applied groovy script in Jenkins by the operator.
 type AppliedGroovyScript struct {
-	// ConfigurationType is the name of the configuration type(base-groovy, user-groovy, user-casc)
+	// ConfigurationType is the name of the configuration type(base-groovy, user-groovy, e"user-casc)
 	ConfigurationType string `json:"configurationType"`
 	// Source is the name of source where is located groovy script
 	Source string `json:"source"`

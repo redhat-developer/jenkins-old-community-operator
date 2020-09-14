@@ -30,10 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	JenkinsReferenceAnnotation = "jenkins.io/jenkins-reference"
-)
-
 var logx = log.Log
 
 func Add(mgr manager.Manager, jenkinsAPIConnectionSettings jenkinsclient.JenkinsAPIConnectionSettings, clientSet kubernetes.Clientset, config rest.Config, notificationEvents *chan event.Event) error {
@@ -105,16 +101,22 @@ func (r *ReconcileCasc) Reconcile(request reconcile.Request) (reconcile.Result, 
 		return reconcile.Result{}, err
 	}
 
+	message := ""
+	if len(casc.Spec.JenkinsName) == 0 {
+		message = fmt.Sprintf("Casc CR '%s' has no reference to a jenkins CR", casc.Spec.JenkinsName)
+		logger.V(log.VDebug).Info(message)
+		return reconcile.Result{Requeue: false}, nil
+	}
+
 	if casc.Status.Phase == constants.JenkinsStatusCompleted {
 		return reconcile.Result{Requeue: false}, nil // Nothing to see here, move along...
 	}
 
 	// fetch the jenkins CR
-	jenkinsName, _ := GetAnnotation(JenkinsReferenceAnnotation, casc.ObjectMeta)
-	message := fmt.Sprintf("Casc configuration references Jenkins instance annotation: %s, jenkinsName: %s", JenkinsReferenceAnnotation, jenkinsName)
+	message = fmt.Sprintf("Casc configuration references jenkins instance: %s", casc.Spec.JenkinsName)
 	logger.V(log.VDebug).Info(message)
 	jenkins := &v1alpha2.Jenkins{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: jenkinsName, Namespace: casc.Namespace}, jenkins)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: casc.Spec.JenkinsName, Namespace: casc.Namespace}, jenkins)
 	if err != nil {
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
@@ -122,7 +124,7 @@ func (r *ReconcileCasc) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 	// check if jenkins Cr is completed
 	if jenkins.Status.Phase != constants.JenkinsStatusCompleted {
-		message = fmt.Sprintf("Jenkins CR '%s' has not reached status 'Completed' yet. Requeuing casc configuration", jenkinsName)
+		message = fmt.Sprintf("Jenkins CR '%s' has not reached status 'Completed' yet. Requeuing casc configuration", casc.Spec.JenkinsName)
 		logger.V(log.VDebug).Info(message)
 		return reconcile.Result{Requeue: true}, nil
 	}
