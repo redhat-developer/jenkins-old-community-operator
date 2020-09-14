@@ -222,6 +222,7 @@ func (r *ReconcileJenkins) reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{Requeue: false}, jenkins, nil
 	}
 	logger.V(log.VDebug).Info(fmt.Sprintf("Base configuration reconcialiation finished successfully: jenkinsClient %+v created", jenkinsClient))
+	startTime := jenkins.Status.ProvisionStartTime
 	if jenkins.Status.BaseConfigurationCompletedTime == nil {
 		now := metav1.Now()
 		jenkins.Status.Phase = constants.JenkinsStatusCompleted
@@ -230,10 +231,12 @@ func (r *ReconcileJenkins) reconcile(request reconcile.Request) (reconcile.Resul
 		if err != nil {
 			return reconcile.Result{}, jenkins, errors.WithStack(err)
 		}
-		time := jenkins.Status.BaseConfigurationCompletedTime.Sub(jenkins.Status.ProvisionStartTime.Time)
-		message := fmt.Sprintf("Base configuration phase is complete, took %s", time)
-		r.sendNewBaseConfigurationCompleteNotification(jenkins, message)
-		logger.Info(message)
+		if startTime != nil {
+			time := jenkins.Status.BaseConfigurationCompletedTime.Sub(startTime.Time)
+			message := fmt.Sprintf("Base configuration phase is complete, took %s", time)
+			r.sendNewBaseConfigurationCompleteNotification(jenkins, message)
+			logger.Info(message)
+		}
 	}
 
 	// Reconcile seedjobs and backups
@@ -271,10 +274,12 @@ func (r *ReconcileJenkins) reconcile(request reconcile.Request) (reconcile.Resul
 		if err != nil {
 			return reconcile.Result{}, jenkins, errors.WithStack(err)
 		}
-		time := jenkins.Status.UserConfigurationCompletedTime.Sub(jenkins.Status.ProvisionStartTime.Time)
-		message := fmt.Sprintf("User configuration phase is complete, took %s", time)
-		r.sendNewUserConfigurationCompleteNotification(jenkins, message)
-		logger.Info(message)
+		if startTime != nil {
+			time := jenkins.Status.UserConfigurationCompletedTime.Sub(startTime.Time)
+			message := fmt.Sprintf("User configuration phase is complete, took %s", time)
+			r.sendNewUserConfigurationCompleteNotification(jenkins, message)
+			logger.Info(message)
+		}
 	}
 	return reconcile.Result{}, jenkins, nil
 }
