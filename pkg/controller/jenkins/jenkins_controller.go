@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"time"
 
+	//"k8s.io/kubernetes/pkg/apis/extensions"
+
 	appsv1 "k8s.io/api/apps/v1"
 
 	"github.com/jenkinsci/kubernetes-operator/pkg/apis/jenkins/v1alpha2"
@@ -38,10 +40,13 @@ type reconcileError struct {
 }
 
 const (
-	APIVersion             = "core/v1"
+	APIVersion        = "core/v1"
+	IngressAPIVersion = "extensions/v1beta1"
+
 	DeploymentKind         = "Deployment"
 	SecretKind             = "Secret"
 	ConfigMapKind          = "ConfigMap"
+	IngressKind            = "Ingress"
 	containerProbeURI      = "login"
 	containerProbePortName = "http"
 )
@@ -102,6 +107,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
+	// FIXME try to find a way to watch Ingresses see also apis.go
+	//ingressResource := &source.Kind{Type: &extensions.Ingress{TypeMeta: metav1.TypeMeta{APIVersion: IngressAPIVersion, Kind: IngressKind}}}
+	//err = c.Watch(ingressResource, jenkinsHandler)
+	//if err != nil {
+	//	return errors.WithStack(err)
+	//}
 	return nil
 }
 

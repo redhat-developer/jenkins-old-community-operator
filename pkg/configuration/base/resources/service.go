@@ -39,12 +39,12 @@ func UpdateService(actual corev1.Service, config v1alpha2.Service) corev1.Servic
 
 // GetJenkinsHTTPServiceName returns Kubernetes service name used for expose Jenkins HTTP endpoint
 func GetJenkinsHTTPServiceName(jenkins *v1alpha2.Jenkins) string {
-	return fmt.Sprintf("%s-%s", constants.LabelAppValue, jenkins.ObjectMeta.Name)
+	return fmt.Sprintf("%s-%s-%s", constants.LabelAppValue, jenkins.ObjectMeta.Name, constants.HTTP)
 }
 
 // GetJenkinsJNLPServiceName returns Kubernetes service name used for expose Jenkins slave endpoint
 func GetJenkinsJNLPServiceName(jenkins *v1alpha2.Jenkins) string {
-	return fmt.Sprintf("%s-%s-jnlp", constants.LabelAppValue, jenkins.ObjectMeta.Name)
+	return fmt.Sprintf("%s-%s-%s", constants.LabelAppValue, jenkins.ObjectMeta.Name, constants.JNLP)
 }
 
 // GetJenkinsHTTPServiceFQDN returns Kubernetes service FQDN used for expose Jenkins HTTP endpoint

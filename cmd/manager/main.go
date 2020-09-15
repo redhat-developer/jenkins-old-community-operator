@@ -239,6 +239,8 @@ func filterGKVsFromAddToScheme(gvks []schema.GroupVersionKind) []schema.GroupVer
 		{Kind: "ConfigMap", Version: matchAnyValue},
 		{Kind: "Service", Version: matchAnyValue},
 		{Group: "apps", Kind: "Deployment", Version: matchAnyValue},
+		{Group: "extensions", Kind: "Ingress", Version: matchAnyValue},
+
 		// Openshift Resources
 		{Group: "route.openshift.io", Kind: "Route", Version: matchAnyValue},
 		{Group: "image.openshift.io", Kind: "ImageStream", Version: matchAnyValue},

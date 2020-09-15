@@ -3,6 +3,7 @@ kind: Jenkins
 metadata:
   name: example
 spec:
+  host: "test.com"
   jenkinsAPISettings:
     authorizationStrategy: serviceAccount
   master:

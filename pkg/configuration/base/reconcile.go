@@ -80,9 +80,17 @@ func (r *ReconcileJenkinsBaseConfiguration) Reconcile() (reconcile.Result, jenki
 	}
 	if !ok {
 		//TODO add what plugins have been changed
-		message := "Some plugins have changed, restarting Jenkins"
+		message := "Some plugins have changed, Jenkins may need restart"
 		r.logger.Info(message)
 	}
+
+	r.logger.V(log.VDebug).Info("Ensuring Ingress is present")
+	result, err = r.ensureJenkinsIngresstIsPresent(jenkinsConfig)
+	if err != nil {
+		r.logger.V(log.VDebug).Info(fmt.Sprintf("Error when ensuring if Jenkins Ingress is present %s", err))
+		return reconcile.Result{}, nil, err
+	}
+
 	result, err = r.ensureBaseConfiguration(jenkinsClient)
 	return result, jenkinsClient, err
 	//return result, nil, err
@@ -135,9 +143,8 @@ func (r *ReconcileJenkinsBaseConfiguration) ensureResourcesRequiredForJenkinsDep
 		if err := r.createRoute(metaObject, httpServiceName, r.Configuration.Jenkins); err != nil {
 			return err
 		}
-		r.logger.V(log.VDebug).Info("Jenkins Route is present")
+		r.logger.V(log.VDebug).Info("Jenkins Route has been created present")
 	}
-
 	return nil
 }
 

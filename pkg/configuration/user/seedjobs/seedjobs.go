@@ -250,7 +250,6 @@ func (s *seedJobs) createJobs(jenkins *v1alpha2.Jenkins) (requeue bool, err erro
 		Configurations: []v1alpha3.ConfigMapRef{{Name: ""}},
 	}
 	groovyClient := groovy.New(s.jenkinsClient, s.Client, jenkins, SeedJobsType, customization)
-	//FIXME ensure that jobs are run in alphabetical order
 	for _, seedJob := range jenkins.Spec.SeedJobs {
 		credentialValue, err := s.credentialValue(jenkins.Namespace, seedJob)
 		if err != nil {
