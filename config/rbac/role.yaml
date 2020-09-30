@@ -1,0 +1,48 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - jenkins.jenkins.io
+  resources:
+  - jenkins
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - jenkins.jenkins.io
+  resources:
+  - jenkins/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - jenkins.jenkins.io
+  resources:
+  - jenkinsimages
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - jenkins.jenkins.io
+  resources:
+  - jenkinsimages/status
+  verbs:
+  - get
+  - patch
+  - update
