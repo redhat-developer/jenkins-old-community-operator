@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jenkinsci/kubernetes-operator/pkg/apis/jenkins/v1alpha2"
+	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
@@ -45,7 +45,7 @@ func (r *JenkinsReconcilerBaseConfiguration) createRoute(meta metav1.ObjectMeta,
 			Spec: routeSpec,
 		}
 		route = resources.UpdateRoute(actual, config)
-		if err = r.CreateResource(&route); err != nil {
+		if err = r.CreateResource(&route.ObjectMeta); err != nil {
 			return stackerr.WithStack(err)
 		}
 	} else if err != nil {
@@ -54,5 +54,6 @@ func (r *JenkinsReconcilerBaseConfiguration) createRoute(meta metav1.ObjectMeta,
 
 	route.ObjectMeta.Labels = meta.Labels // make sure that user won't break service by hand
 	route = resources.UpdateRoute(route, config)
-	return stackerr.WithStack(r.UpdateResource(&route))
+	err = r.UpdateResource(&route.ObjectMeta)
+	return stackerr.WithStack(err)
 }
