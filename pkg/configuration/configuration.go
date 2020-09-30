@@ -7,9 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jenkinsci/kubernetes-operator/pkg/apis/jenkins/v1alpha3"
-
-	"github.com/jenkinsci/kubernetes-operator/pkg/apis/jenkins/v1alpha2"
+	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	jenkinsclient "github.com/jenkinsci/kubernetes-operator/pkg/client"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	"github.com/jenkinsci/kubernetes-operator/pkg/log"
@@ -38,7 +36,6 @@ type Configuration struct {
 	RestConfig                   rest.Config
 	JenkinsAPIConnectionSettings jenkinsclient.JenkinsAPIConnectionSettings
 	Jenkins                      *v1alpha2.Jenkins
-	Casc                         *v1alpha3.Casc
 	Scheme                       *runtime.Scheme
 	Notifications                *chan event.Event
 }
@@ -207,7 +204,7 @@ func (c *Configuration) GetJenkinsMasterPodName() string {
 	return ""
 }
 
-func (c *Configuration) GetReplicaSetByDeployment() (appsv1.ReplicaSet, error) {
+func (c *Configuration) GetReplicaSetByDeployment() (*appsv1.ReplicaSet, error) {
 	deployment, _ := c.GetJenkinsDeployment()
 	selector, err := metav1.LabelSelectorAsSelector(deployment.Spec.Selector)
 	replicasSetList := appsv1.ReplicaSetList{}
@@ -218,18 +215,25 @@ func (c *Configuration) GetReplicaSetByDeployment() (appsv1.ReplicaSet, error) {
 	err = c.Client.List(context.TODO(), &replicasSetList, &listOptions)
 	if err != nil || len(replicasSetList.Items) == 0 {
 		logger.V(log.VDebug).Info(fmt.Sprintf("Error while getting the replicaset using selector: %s : error: %+v", selector, err))
+		return nil, stackerr.Errorf("Deployment has no replicaSet attached yet: Error was: %+v", err)
 	}
 	replicaSet := replicasSetList.Items[0]
 	logger.V(log.VDebug).Info(fmt.Sprintf("Successfully got the ReplicaSet: %s", replicaSet.Name))
-	return replicaSet, err
+	return &replicaSet, nil
 }
 
 func (c *Configuration) GetPodByDeployment() (*corev1.Pod, error) {
-	replicaSet, _ := c.GetReplicaSetByDeployment()
-	selector, _ := metav1.LabelSelectorAsSelector(replicaSet.Spec.Selector)
+	replicaSet, err := c.GetReplicaSetByDeployment()
+	if err != nil {
+		return nil, err
+	}
+	selector, err := metav1.LabelSelectorAsSelector(replicaSet.Spec.Selector)
+	if err != nil {
+		return nil, err
+	}
 	listOptions := client.ListOptions{LabelSelector: selector}
 	pods := corev1.PodList{}
-	err := c.Client.List(context.TODO(), &pods, &listOptions)
+	err = c.Client.List(context.TODO(), &pods, &listOptions)
 	if err != nil || len(pods.Items) == 0 {
 		return nil, stackerr.Errorf("Deployment has no pod attached yet: Error was: %+v", err)
 	}

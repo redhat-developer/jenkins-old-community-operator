@@ -2,12 +2,10 @@ package user
 
 import (
 	"github.com/go-logr/logr"
-	"github.com/jenkinsci/kubernetes-operator/pkg/apis/jenkins/v1alpha2"
+	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	jenkinsclient "github.com/jenkinsci/kubernetes-operator/pkg/client"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/backuprestore"
-	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/user/casc"
-	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/user/seedjobs"
 	"github.com/jenkinsci/kubernetes-operator/pkg/log"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -15,7 +13,6 @@ import (
 
 // ReconcileUserConfiguration defines API client for reconcile User Configuration
 type ReconcileUserConfiguration interface {
-	ReconcileCasc() (reconcile.Result, error)
 	ReconcileOthers() (reconcile.Result, error)
 	Validate(jenkins *v1alpha2.Jenkins) ([]string, error)
 }
@@ -35,29 +32,9 @@ func New(configuration configuration.Configuration, jenkinsClient jenkinsclient.
 	}
 }
 
-// ReconcileCasc is a reconcile loop for casc.
-func (r *reconcileUserConfiguration) ReconcileCasc() (reconcile.Result, error) {
-	result, err := r.ensureCasc()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if result.Requeue {
-		return result, nil
-	}
-	return reconcile.Result{}, nil
-}
-
 // Reconcile it's a main reconciliation loop for user supplied configuration
 func (r *reconcileUserConfiguration) ReconcileOthers() (reconcile.Result, error) {
 	backupAndRestore := backuprestore.New(r.Configuration, r.logger)
-
-	result, err := r.ensureSeedJobs()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if result.Requeue {
-		return result, nil
-	}
 
 	if err := backupAndRestore.Restore(r.jenkinsClient); err != nil {
 		return reconcile.Result{}, err
@@ -68,42 +45,6 @@ func (r *reconcileUserConfiguration) ReconcileOthers() (reconcile.Result, error)
 	}
 	if err := backupAndRestore.EnsureBackupTrigger(); err != nil {
 		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{}, nil
-}
-
-func (r *reconcileUserConfiguration) ensureSeedJobs() (reconcile.Result, error) {
-	seedJobs := seedjobs.New(r.jenkinsClient, r.Configuration)
-	done, err := seedJobs.EnsureSeedJobs(r.Configuration.Jenkins)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if !done {
-		return reconcile.Result{Requeue: true}, nil
-	}
-	return reconcile.Result{}, nil
-}
-
-func (r *reconcileUserConfiguration) ensureCasc() (reconcile.Result, error) {
-	//Yaml
-	configurationAsCodeClient := casc.New(r.Configuration, r.RestConfig, r.jenkinsClient, "user-casc", r.Configuration.Casc, r.Configuration.Casc.Spec.ConfigurationAsCode)
-	requeue, err := configurationAsCodeClient.EnsureCasc(r.Configuration.Jenkins.Name)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if requeue {
-		return reconcile.Result{Requeue: true}, nil
-	}
-
-	// Groovy
-	configurationAsCodeClient = casc.New(r.Configuration, r.RestConfig, r.jenkinsClient, "user-groovy", r.Configuration.Casc, r.Configuration.Casc.Spec.GroovyScripts)
-	requeue, err = configurationAsCodeClient.EnsureGroovy(r.Configuration.Jenkins.Name)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if requeue {
-		return reconcile.Result{Requeue: true}, nil
 	}
 
 	return reconcile.Result{}, nil

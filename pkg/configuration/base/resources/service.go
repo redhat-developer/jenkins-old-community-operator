@@ -3,9 +3,8 @@ package resources
 import (
 	"fmt"
 
-	"github.com/jenkinsci/kubernetes-operator/pkg/apis/jenkins/v1alpha2"
+	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	stackerr "github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
@@ -70,11 +69,6 @@ func GetJenkinsJNLPServiceFQDN(jenkins *v1alpha2.Jenkins) (string, error) {
 // GetClusterDomain returns Kubernetes cluster domain, default to "cluster.local"
 func getClusterDomain() (string, error) {
 	clusterDomain := "cluster.local"
-	if ok, err := isRunningInCluster(); !ok {
-		return clusterDomain, nil
-	} else if err != nil {
-		return "", nil
-	}
 	apiSvc := "kubernetes.default.svc"
 	cname, err := net.LookupCNAME(apiSvc)
 	if err != nil {
@@ -86,15 +80,4 @@ func getClusterDomain() (string, error) {
 	clusterDomain = strings.TrimSuffix(clusterDomain, ".")
 
 	return clusterDomain, nil
-}
-
-func isRunningInCluster() (bool, error) {
-	_, err := k8sutil.GetOperatorNamespace()
-	if err != nil {
-		if err == k8sutil.ErrNoNamespace || err == k8sutil.ErrRunLocal {
-			return false, nil
-		}
-		return true, nil
-	}
-	return false, stackerr.WithStack(err)
 }
