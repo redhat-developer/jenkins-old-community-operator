@@ -19,18 +19,23 @@ package main
 import (
 	"flag"
 	"fmt"
+	//"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"os"
+	currentruntime "runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	jenkinsv1alpha2 "github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	"github.com/jenkinsci/kubernetes-operator/controllers"
+	"github.com/jenkinsci/kubernetes-operator/version"
+	sdkVersion "github.com/operator-framework/operator-sdk/version"
+
 	kzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -51,48 +56,89 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	parsePglags(metricsAddr, enableLeaderElection)
+
+	mgr := initManager(metricsAddr, enableLeaderElection)
+	setupJenkinsRenconciler(mgr)
+	setupJenkinsImageRenconciler(mgr)
+	// +kubebuilder:scaffold:builder
+	runMananger(mgr)
+}
+
+func parsePglags(metricsAddr string, enableLeaderElection bool) {
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	//hostname := pflag.String("jenkins-api-hostname", "", "Hostname or IP of Jenkins API. It can be service name, node IP or localhost.")
+	//port := pflag.Int("jenkins-api-port", 0, "The port on which Jenkins API is running. Note: If you want to use nodePort don't set this setting and --jenkins-api-use-nodeport must be true.")
+	//useNodePort := pflag.Bool("jenkins-api-use-nodeport", false, "Connect to Jenkins API using the service nodePort instead of service port. If you want to set this as true - don't set --jenkins-api-port.")
+	//debug := pflag.Bool("debug", false, "Set log level to debug")
 	flag.Parse()
-
 	ctrl.SetLogger(kzap.New(kzap.UseDevMode(true)))
+}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+func initManager(metricsAddr string, enableLeaderElection bool) manager.Manager {
+	printInfo()
+	mgr, err := startManager(metricsAddr, enableLeaderElection)
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+	return mgr
+}
+
+func runMananger(mgr manager.Manager) {
+	setupLog.Info("starting manager")
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+		setupLog.Error(err, "problem running manager")
+		os.Exit(1)
+	}
+}
+
+func startManager(metricsAddr string, enableLeaderElection bool) (manager.Manager, error) {
+	options := ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "9cf053ac.jenkins.io",
-	})
+	}
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+	return mgr, err
+}
 
-	if err = (&controllers.JenkinsReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Jenkins"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+func setupJenkinsRenconciler(mgr manager.Manager) {
+	if err := newJenkinsReconciler(mgr).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Jenkins")
 		os.Exit(1)
 	}
-	if err = (&controllers.JenkinsImageReconciler{
+}
+
+func newJenkinsReconciler(mgr manager.Manager) *controllers.JenkinsReconciler {
+	return &controllers.JenkinsReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Jenkins"),
+		Scheme: mgr.GetScheme(),
+	}
+}
+
+func setupJenkinsImageRenconciler(mgr manager.Manager) {
+	if err := newJenkinsImageRenconciler(mgr).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Jenkins")
+		os.Exit(1)
+	}
+}
+
+func newJenkinsImageRenconciler(mgr manager.Manager) *controllers.JenkinsImageReconciler {
+	return &controllers.JenkinsImageReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("JenkinsImage"),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "JenkinsImage")
-		os.Exit(1)
-	}
-	// +kubebuilder:scaffold:builder
-
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
 	}
 }
 
@@ -158,4 +204,12 @@ func fatal(err error, debug bool) {
 		setupLog.Error(nil, fmt.Sprintf("%s", err))
 	}
 	os.Exit(-1)
+}
+
+func printInfo() {
+	setupLog.Info(fmt.Sprintf("Version: %s", version.Version))
+	setupLog.Info(fmt.Sprintf("Git commit: %s", version.GitCommit))
+	setupLog.Info(fmt.Sprintf("Go Version: %s", currentruntime.Version()))
+	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", currentruntime.GOOS, currentruntime.GOARCH))
+	setupLog.Info(fmt.Sprintf("operator-sdk Version: %v", sdkVersion.Version))
 }

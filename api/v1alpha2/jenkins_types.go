@@ -679,3 +679,7 @@ func (jenkins *Jenkins) GetNamespace() string {
 func (jenkins *Jenkins) GetCRName() string {
 	return jenkins.ObjectMeta.Name
 }
+
+func init() {
+	SchemeBuilder.Register(&Jenkins{}, &JenkinsList{})
+}
