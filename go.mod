@@ -5,18 +5,14 @@ go 1.13
 require (
 	github.com/bndr/gojenkins v0.0.0-20181125150310-de43c03cf849
 	github.com/docker/distribution v2.7.1+incompatible
-	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce // indirect
 	github.com/elazarl/goproxy v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/emersion/go-sasl v0.0.0-20190817083125-240c8404624e // indirect
 	github.com/emersion/go-smtp v0.11.2
 	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.1
-	github.com/go-openapi/errors v0.19.2 // indirect
-	github.com/go-openapi/spec v0.19.4 // indirect
 	github.com/golang/mock v1.3.1
 	github.com/golangci/golangci-lint v1.26.0 // indirect
-	github.com/lithammer/dedent v1.1.0 // indirect
 	github.com/mailgun/mailgun-go/v3 v3.6.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
@@ -24,12 +20,10 @@ require (
 	github.com/operator-framework/operator-sdk v0.17.0
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron v1.2.0 // indirect
-	github.com/spf13/cobra v0.0.5 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
 	go.uber.org/zap v1.14.1
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
 	golang.org/x/tools v0.0.0-20200917050209-655488c8ae71 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -37,14 +31,10 @@ require (
 	k8s.io/apimachinery v0.17.4
 	k8s.io/cli-runtime v0.17.4
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/code-generator v0.17.4 // indirect
-	k8s.io/gengo v0.0.0-20191010091904-7fa3014cb28f // indirect
-	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a // indirect
 	k8s.io/kubectl v0.17.4
 	k8s.io/kubernetes v1.13.0
 	k8s.io/utils v0.0.0-20190801114015-581e00157fb1
 	sigs.k8s.io/controller-runtime v0.5.2
-	sigs.k8s.io/controller-tools v0.2.8 // indirect
 )
 
 // Pinned to kubernetes-1.16.2
