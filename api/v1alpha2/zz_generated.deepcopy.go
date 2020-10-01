@@ -478,7 +478,6 @@ func (in *JenkinsPlugin) DeepCopy() *JenkinsPlugin {
 func (in *JenkinsSpec) DeepCopyInto(out *JenkinsSpec) {
 	*out = *in
 	in.Master.DeepCopyInto(&out.Master)
-	in.JenkinsImageRef.DeepCopyInto(&out.JenkinsImageRef)
 	if in.Notifications != nil {
 		in, out := &in.Notifications, &out.Notifications
 		*out = make([]Notification, len(*in))

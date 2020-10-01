@@ -138,7 +138,7 @@ func (r *JenkinsReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error)
 	return ctrl.Result{}, nil
 }
 
-func (r *JenkinsReconciler) reconcile(request reconcile.Request) (reconcile.Result, *v1alpha2.Jenkins, error) {
+func (r *JenkinsReconciler) reconcile(request ctrl.Request) (ctrl.Result, *v1alpha2.Jenkins, error) {
 	logger := r.Log.WithValues("cr", request.Name)
 	// Fetch the Jenkins instance
 	jenkins := &v1alpha2.Jenkins{}
@@ -146,12 +146,14 @@ func (r *JenkinsReconciler) reconcile(request reconcile.Request) (reconcile.Resu
 	err = r.Client.Get(context.TODO(), request.NamespacedName, jenkins)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
+			logger.V(log.VWarn).Info(fmt.Sprintf("Object not found: %s: %+v", request, jenkins))
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil, nil
 		}
 		// Error reading the object - requeue the request.
+		logger.V(log.VWarn).Info(fmt.Sprintf("Error reading object not found: %s: %+v", request, jenkins))
 		return reconcile.Result{}, nil, errors.WithStack(err)
 	}
 	var requeue bool

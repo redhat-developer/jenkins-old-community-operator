@@ -45,15 +45,20 @@ func (r *JenkinsReconcilerBaseConfiguration) createRoute(meta metav1.ObjectMeta,
 			Spec: routeSpec,
 		}
 		route = resources.UpdateRoute(actual, config)
-		if err = r.CreateResource(&route.ObjectMeta); err != nil {
+		if err = r.CreateResource(&route); err != nil {
+			r.logger.Error(err, fmt.Sprintf("Error while creating Route: %+v : error: %+v", route, err))
 			return stackerr.WithStack(err)
 		}
 	} else if err != nil {
+		r.logger.Error(err, fmt.Sprintf("Error while creating Route: %+v : error: %+v", route, err))
 		return stackerr.WithStack(err)
 	}
 
 	route.ObjectMeta.Labels = meta.Labels // make sure that user won't break service by hand
 	route = resources.UpdateRoute(route, config)
 	err = r.UpdateResource(&route.ObjectMeta)
+	if err != nil {
+		r.logger.Error(err, fmt.Sprintf("Error while creating Route: %+v : error: %+v", route, err))
+	}
 	return stackerr.WithStack(err)
 }

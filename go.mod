@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/bndr/gojenkins v0.0.0-20181125150310-de43c03cf849
 	github.com/docker/distribution v2.7.1+incompatible
-	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
+	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce // indirect
 	github.com/elazarl/goproxy v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/emersion/go-sasl v0.0.0-20190817083125-240c8404624e // indirect
