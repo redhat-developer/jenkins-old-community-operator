@@ -107,8 +107,8 @@ func main() {
 		setupLog.Info("If JenkinsImages are built without specified destination, they will be pushed into it.")
 	}
 
-	c := make(chan e.Event)
-	go notifications.Listen(c, events, mgr.GetClient())
+	notificationsChannel := make(chan e.Event)
+	go notifications.Listen(notificationsChannel, events, mgr.GetClient())
 
 	// validate jenkins API connection
 	jenkinsAPIConnectionSettings := client.JenkinsAPIConnectionSettings{Hostname: *hostname, Port: *port, UseNodePort: *useNodePort}
@@ -117,7 +117,7 @@ func main() {
 	}
 
 	// setup Jenkins controller
-	setupJenkinsRenconciler(mgr)
+	setupJenkinsRenconciler(mgr, notificationsChannel)
 	setupJenkinsImageRenconciler(mgr)
 	// start the Cmd
 	setupLog.Info("Starting the Cmd.")
@@ -169,18 +169,19 @@ func startManager(metricsAddr string, enableLeaderElection bool) (manager.Manage
 	return mgr, err
 }
 
-func setupJenkinsRenconciler(mgr manager.Manager) {
-	if err := newJenkinsReconciler(mgr).SetupWithManager(mgr); err != nil {
+func setupJenkinsRenconciler(mgr manager.Manager, channel chan e.Event) {
+	if err := newJenkinsReconciler(mgr, channel).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Jenkins")
 		os.Exit(1)
 	}
 }
 
-func newJenkinsReconciler(mgr manager.Manager) *controllers.JenkinsReconciler {
+func newJenkinsReconciler(mgr manager.Manager, channel chan e.Event) *controllers.JenkinsReconciler {
 	return &controllers.JenkinsReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Jenkins"),
-		Scheme: mgr.GetScheme(),
+		Client:             mgr.GetClient(),
+		Log:                ctrl.Log.WithName("controllers").WithName("Jenkins"),
+		Scheme:             mgr.GetScheme(),
+		NotificationEvents: channel,
 	}
 }
 

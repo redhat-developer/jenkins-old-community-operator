@@ -20,6 +20,7 @@ func (r *JenkinsReconcilerBaseConfiguration) createRoute(meta metav1.ObjectMeta,
 	route := routev1.Route{}
 	name := fmt.Sprintf("jenkins-%s", config.ObjectMeta.Name)
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: meta.Namespace}, &route)
+	r.logger.Info(fmt.Sprintf("Got route: %s", route.Name))
 	if err != nil && apierrors.IsNotFound(err) {
 		port := &routev1.RoutePort{
 			TargetPort: intstr.FromString(""),
@@ -46,17 +47,16 @@ func (r *JenkinsReconcilerBaseConfiguration) createRoute(meta metav1.ObjectMeta,
 		}
 		route = resources.UpdateRoute(actual, config)
 		if err = r.CreateResource(&route); err != nil {
-			r.logger.Error(err, fmt.Sprintf("Error while creating Route: %+v : error: %+v", route, err))
+			r.logger.Error(err, fmt.Sprintf("Error while creating (NotFoud) Route: %+v : error: %+v", route, err))
 			return stackerr.WithStack(err)
 		}
 	} else if err != nil {
 		r.logger.Error(err, fmt.Sprintf("Error while creating Route: %+v : error: %+v", route, err))
 		return stackerr.WithStack(err)
 	}
-
 	route.ObjectMeta.Labels = meta.Labels // make sure that user won't break service by hand
 	route = resources.UpdateRoute(route, config)
-	err = r.UpdateResource(&route.ObjectMeta)
+	err = r.UpdateResource(&route)
 	if err != nil {
 		r.logger.Error(err, fmt.Sprintf("Error while creating Route: %+v : error: %+v", route, err))
 	}

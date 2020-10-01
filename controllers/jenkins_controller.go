@@ -68,7 +68,7 @@ type JenkinsReconciler struct {
 	jenkinsAPIConnectionSettings jenkinsclient.JenkinsAPIConnectionSettings
 	clientSet                    kubernetes.Clientset
 	restConfig                   rest.Config
-	notificationEvents           *chan event.Event
+	NotificationEvents           chan event.Event
 }
 
 type reconcileError struct {
@@ -283,7 +283,7 @@ func (r *JenkinsReconciler) reconcile(request ctrl.Request) (ctrl.Result, *v1alp
 }
 
 func (r *JenkinsReconciler) sendNewBaseConfigurationFailedNotification(jenkins *v1alpha2.Jenkins, message string, baseMessages []string) {
-	*r.notificationEvents <- event.Event{
+	r.NotificationEvents <- event.Event{
 		Jenkins: *jenkins,
 		Phase:   event.PhaseBase,
 		Level:   v1alpha2.NotificationLevelWarning,
@@ -297,7 +297,7 @@ func (r *JenkinsReconciler) newReconcilierConfiguration(jenkins *v1alpha2.Jenkin
 		ClientSet:                    r.clientSet,
 		RestConfig:                   r.restConfig,
 		JenkinsAPIConnectionSettings: r.jenkinsAPIConnectionSettings,
-		Notifications:                r.notificationEvents,
+		Notifications:                &r.NotificationEvents,
 		Jenkins:                      jenkins,
 		Scheme:                       r.Scheme,
 	}
@@ -305,7 +305,7 @@ func (r *JenkinsReconciler) newReconcilierConfiguration(jenkins *v1alpha2.Jenkin
 }
 
 func (r *JenkinsReconciler) sendNewReconcileLoopFailedNotification(jenkins *v1alpha2.Jenkins, reconcileFailLimit uint64, err error) {
-	*r.notificationEvents <- event.Event{
+	r.NotificationEvents <- event.Event{
 		Jenkins: *jenkins,
 		Phase:   event.PhaseBase,
 		Level:   v1alpha2.NotificationLevelWarning,
@@ -317,7 +317,7 @@ func (r *JenkinsReconciler) sendNewReconcileLoopFailedNotification(jenkins *v1al
 }
 
 func (r *JenkinsReconciler) sendNewBaseConfigurationCompleteNotification(jenkins *v1alpha2.Jenkins, message string) {
-	*r.notificationEvents <- event.Event{
+	r.NotificationEvents <- event.Event{
 		Jenkins: *jenkins,
 		Phase:   event.PhaseBase,
 		Level:   v1alpha2.NotificationLevelInfo,
@@ -450,7 +450,7 @@ func (r *JenkinsReconciler) setDefaults(jenkins *v1alpha2.Jenkins) (requeue bool
 }
 
 func (r *JenkinsReconciler) sendNewGroovyScriptExecutionFailedNotification(jenkins *v1alpha2.Jenkins, groovyErr *jenkinsclient.GroovyScriptExecutionFailed) {
-	*r.notificationEvents <- event.Event{
+	r.NotificationEvents <- event.Event{
 		Jenkins: *jenkins,
 		Phase:   event.PhaseBase,
 		Level:   v1alpha2.NotificationLevelWarning,
