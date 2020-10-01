@@ -19,6 +19,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	reconcile "sigs.k8s.io/controller-runtime"
 )
 
@@ -43,7 +44,7 @@ func New(config configuration.Configuration, jenkinsAPIConnectionSettings jenkin
 }
 
 // Reconcile takes care of base configuration.
-func (r *JenkinsReconcilerBaseConfiguration) Reconcile() (reconcile.Result, jenkinsclient.Jenkins, error) {
+func (r *JenkinsReconcilerBaseConfiguration) Reconcile(request ctrl.Request) (reconcile.Result, jenkinsclient.Jenkins, error) {
 	jenkinsConfig := resources.NewResourceObjectMeta(r.Configuration.Jenkins)
 	// Create Necessary Resources
 	err := r.ensureResourcesRequiredForJenkinsDeploymentArePresent(jenkinsConfig)
@@ -52,14 +53,14 @@ func (r *JenkinsReconcilerBaseConfiguration) Reconcile() (reconcile.Result, jenk
 	}
 	r.logger.V(log.VDebug).Info("Kubernetes resources are present")
 
-	result, err := r.ensureJenkinsDeploymentIsPresent(jenkinsConfig)
+	result, err := r.ensureJenkinsDeploymentIsPresent(jenkinsConfig, request)
 	if err != nil {
 		r.logger.V(log.VDebug).Info(fmt.Sprintf("Error when ensuring if Jenkins Deployment is present %s", err))
 		return reconcile.Result{}, nil, err
 	}
 	r.logger.V(log.VDebug).Info(fmt.Sprintf("Jenkins Deployment is present: Requeue result is: %+v", result.Requeue))
 	r.logger.V(log.VDebug).Info("Ensuring that Deployment is ready")
-	result, err = r.ensureJenkinsDeploymentIsReady()
+	result, err = r.ensureJenkinsDeploymentIsReady(request)
 	if err != nil {
 		r.logger.V(log.VDebug).Info(fmt.Sprintf("Error when ensuring that Deployment is ready %s", err))
 		return reconcile.Result{}, nil, err
@@ -84,13 +85,13 @@ func (r *JenkinsReconcilerBaseConfiguration) Reconcile() (reconcile.Result, jenk
 		return reconcile.Result{}, nil, err
 	}
 
-	jenkinsClient, err2 := r.Configuration.GetJenkinsClient()
+	/*_, err2 := r.Configuration.GetJenkinsClient()
 	if err2 != nil {
 		r.logger.V(log.VDebug).Info(fmt.Sprintf("Error when try to configure JenkinsClient: %s", err2))
 		return reconcile.Result{}, nil, err
 	}
 	r.logger.V(log.VDebug).Info("Jenkins API client set")
-	ok, err := r.verifyPlugins(jenkinsClient)
+	//ok, err := r.verifyPlugins(jenkinsClient)
 	if err != nil {
 		return reconcile.Result{}, nil, err
 	}
@@ -99,8 +100,8 @@ func (r *JenkinsReconcilerBaseConfiguration) Reconcile() (reconcile.Result, jenk
 		message := "Some plugins have changed, restarting Jenkins"
 		r.logger.Info(message)
 	}
-
-	return result, jenkinsClient, err
+	*/
+	return result, nil, err
 }
 
 func (r *JenkinsReconcilerBaseConfiguration) ensureResourcesRequiredForJenkinsDeploymentArePresent(metaObject metav1.ObjectMeta) error {

@@ -41,11 +41,7 @@ spec:
   configurationAsCode:
     enableAutoReload: true
     enabled: true
-    secret: 
-      name: test
     defaultConfig: false
-    configurations: 
-    - name: aa
   #seedJobs:
   #- id: jenkins-operator
   #  targets: "cicd/jobs/*.jenkins"

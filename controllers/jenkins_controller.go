@@ -23,10 +23,11 @@ import (
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
 	"github.com/jenkinsci/kubernetes-operator/pkg/plugins"
+	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"math/rand"
+	//	"math/rand"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
@@ -36,7 +37,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"time"
+	//"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -81,7 +82,10 @@ var reconcileErrors = map[string]reconcileError{}
 func (r *JenkinsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&jenkinsv1alpha2.Jenkins{}).
+		Owns(&corev1.Service{}).
+		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&routev1.Route{}).
 		Complete(r)
 }
 
@@ -94,15 +98,34 @@ func (r *JenkinsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *JenkinsReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = r.Log.WithValues("jenkins", request.NamespacedName)
-
+	logger := r.Log.WithValues("jenkins", request.NamespacedName)
 	reconcileFailLimit := uint64(10)
-	logger := r.Log
 	logger.V(log.VDebug).Info(fmt.Sprintf("Reconciling Jenkins: %s", request.Name))
-	result, jenkins, err := r.reconcile(request)
+
+	// Fetch the Jenkins jenkins
+	jenkins := &jenkinsv1alpha2.Jenkins{}
+	err := r.Client.Get(context.TODO(), request.NamespacedName, jenkins)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Return and don't requeue
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		return ctrl.Result{}, err
+	}
+
+	result, err := r.reconcile(request, jenkins)
+	if err != nil {
+		return result, err
+	}
+
 	if err != nil && apierrors.IsConflict(err) {
+		logger.V(log.VWarn).Info(fmt.Sprintf("Reconcile loop failed 1#: %+v", err))
 		return ctrl.Result{Requeue: true}, nil
 	} else if err != nil {
+		logger.V(log.VWarn).Info(fmt.Sprintf("Reconcile loop failed 2#: %+v", err))
 		lastErrors, found := reconcileErrors[request.Name]
 		if found {
 			if err.Error() == lastErrors.err.Error() {
@@ -134,47 +157,26 @@ func (r *JenkinsReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error)
 			r.sendNewGroovyScriptExecutionFailedNotification(jenkins, groovyErr)
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{Requeue: true}, nil
+		logger.V(log.VWarn).Info(fmt.Sprintf("Requeing: !!! Reconcile loop failed: %+v", err))
+		return ctrl.Result{Requeue: false}, nil
 	}
-	if result.Requeue && result.RequeueAfter == 0 {
-		result.RequeueAfter = time.Duration(rand.Intn(10)) * time.Millisecond
-	}
+	/*if result.Requeue && result.RequeueAfter == 0 {
+		result.RequeueAfter = time.Duration(rand.Intn(10)) * time.Second
+	}*/
+	logger.Info(fmt.Sprintf("Reconcile loop success !!!"))
 	return ctrl.Result{}, nil
 }
 
-func (r *JenkinsReconciler) reconcile(request ctrl.Request) (ctrl.Result, *v1alpha2.Jenkins, error) {
+func (r *JenkinsReconciler) reconcile(request ctrl.Request, jenkins *v1alpha2.Jenkins) (ctrl.Result, error) {
 	logger := r.Log.WithValues("cr", request.Name)
-	// Fetch the Jenkins instance
-	jenkins := &v1alpha2.Jenkins{}
 	var err error
-	err = r.Client.Get(context.TODO(), request.NamespacedName, jenkins)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.V(log.VWarn).Info(fmt.Sprintf("Object not found: %s: %+v", request, jenkins))
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return reconcile.Result{}, nil, nil
-		}
-		// Error reading the object - requeue the request.
-		logger.V(log.VWarn).Info(fmt.Sprintf("Error reading object not found: %s: %+v", request, jenkins))
-		return reconcile.Result{}, nil, errors.WithStack(err)
-	}
 	var requeue bool
 	requeue, err = r.setDefaults(jenkins)
 	if err != nil {
-		return reconcile.Result{}, jenkins, err
+		return reconcile.Result{}, err
 	}
 	if requeue {
-		return reconcile.Result{Requeue: true}, jenkins, nil
-	}
-
-	requeue, err = r.handleDeprecatedData(jenkins)
-	if err != nil {
-		return reconcile.Result{}, jenkins, err
-	}
-	if requeue {
-		return reconcile.Result{Requeue: true}, jenkins, nil
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	config := r.newReconcilierConfiguration(jenkins)
@@ -185,7 +187,7 @@ func (r *JenkinsReconciler) reconcile(request ctrl.Request) (ctrl.Result, *v1alp
 	baseConfigurationValidationMessages, err = baseConfiguration.Validate(jenkins)
 	if err != nil {
 		logger.V(log.VDebug).Info(fmt.Sprintf("Error while trying to validate base configuration %s", err))
-		return reconcile.Result{}, jenkins, err
+		return ctrl.Result{}, err
 	}
 	if len(baseConfigurationValidationMessages) > 0 {
 		message := "Validation of base configuration failed, please correct Jenkins CR."
@@ -194,11 +196,11 @@ func (r *JenkinsReconciler) reconcile(request ctrl.Request) (ctrl.Result, *v1alp
 		for _, msg := range baseConfigurationValidationMessages {
 			logger.V(log.VWarn).Info(msg)
 		}
-		return reconcile.Result{}, jenkins, nil // don't requeue
+		return ctrl.Result{}, nil // don't requeue
 	}
 	logger.V(log.VDebug).Info("Base configuration validation finished: No errors on validation messages")
 	logger.V(log.VDebug).Info("Starting base configuration reconciliation...")
-	_, jenkinsClient, err := baseConfiguration.Reconcile()
+	_, _, err = baseConfiguration.Reconcile(request)
 	if err != nil {
 		if r.isJenkinsPodTerminating(err) {
 			logger.Info(fmt.Sprintf("Jenkins Pod in Terminating state with DeletionTimestamp set detected. Changing Jenkins Phase to %s", constants.JenkinsStatusReinitializing))
@@ -207,79 +209,59 @@ func (r *JenkinsReconciler) reconcile(request ctrl.Request) (ctrl.Result, *v1alp
 			// update Jenkins CR Status from Completed to Reinitializing
 			err = r.Client.Update(context.TODO(), jenkins)
 			if err != nil {
-				return reconcile.Result{}, jenkins, errors.WithStack(err)
+				return reconcile.Result{}, errors.WithStack(err)
 			}
 			logger.Info("Base configuration reinitialized, jenkins pod restarted")
-			return reconcile.Result{Requeue: true}, jenkins, err
+			return ctrl.Result{Requeue: true}, err
 		}
 		logger.V(log.VDebug).Info(fmt.Sprintf("Base configuration reconciliation failed with error, requeuing:  %s ", err))
 		//FIXME What we do not requeue ?
-		return reconcile.Result{}, jenkins, err
+		return ctrl.Result{}, err
 	}
 	logger.V(log.VDebug).Info("Base configuration reconciliation successful.")
-	//if result.Requeue {
-	//	return result, jenkins, nil
-	//}
-	if jenkinsClient == nil {
-		logger.V(log.VDebug).Info("Base configuration reconciliation succeeded but returned a nil jenkinsClient. Cannot continue.")
-		return reconcile.Result{}, jenkins, nil
+	// Re-reading Jenkins
+	jenkins = &v1alpha2.Jenkins{}
+	err = r.Client.Get(context.TODO(), request.NamespacedName, jenkins)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			r.Log.V(log.VWarn).Info(fmt.Sprintf("Object not found: %s: %+v", request, jenkins))
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Return and don't requeue
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		r.Log.V(log.VWarn).Info(fmt.Sprintf("Error reading object not found: %s: %+v", request, jenkins))
+		return ctrl.Result{}, errors.WithStack(err)
 	}
-	logger.V(log.VDebug).Info(fmt.Sprintf("Base configuration reconcialiation finished successfully: jenkinsClient %+v created", jenkinsClient))
 	if jenkins.Status.BaseConfigurationCompletedTime == nil {
 		now := metav1.Now()
 		jenkins.Status.Phase = constants.JenkinsStatusCompleted
 		jenkins.Status.BaseConfigurationCompletedTime = &now
+		deployment, err := baseConfiguration.GetJenkinsDeployment()
+		if err != nil {
+			logger.Info(fmt.Sprintf("Error while getting deployment for jenkins instance: %s  , status: %+v", jenkins.Name, jenkins.Status))
+			return ctrl.Result{Requeue: true}, errors.WithStack(err)
+		}
+		if jenkins.Status.ProvisionStartTime == nil {
+			jenkins.Status.ProvisionStartTime = &deployment.CreationTimestamp
+		}
 		err = r.Client.Update(context.TODO(), jenkins)
 		if err != nil {
-			return reconcile.Result{}, jenkins, errors.WithStack(err)
+			logger.Info(fmt.Sprintf("Error while updating jenkins instance: %s  , status: %+v", jenkins.Name, jenkins.Status))
+			return ctrl.Result{Requeue: true}, errors.WithStack(err)
+		}
+		logger.Info(fmt.Sprintf("Base configuration updated: BaseConfigurationCompletedTime: %s", jenkins.Status.BaseConfigurationCompletedTime))
+		if jenkins.Status.ProvisionStartTime == nil {
+			logger.Info(fmt.Sprintf("ProvisionStartTime is nil: requeuing : %s", jenkins.Status.ProvisionStartTime))
+			return ctrl.Result{Requeue: true}, errors.WithStack(err)
 		}
 		time := jenkins.Status.BaseConfigurationCompletedTime.Sub(jenkins.Status.ProvisionStartTime.Time)
 		message := fmt.Sprintf("Base configuration phase is complete, took %s", time)
 		r.sendNewBaseConfigurationCompleteNotification(jenkins, message)
 		logger.Info(message)
 	}
-
-	// Reconcile seedjobs and backups
-	/*userConfiguration := user.New(config, jenkinsClient)
-
-	var messages []string
-	messages, err = userConfiguration.Validate(jenkins)
-	if err != nil {
-		return reconcile.Result{}, jenkins, err
-	}
-	if len(messages) > 0 {
-		message := "Validation of user configuration failed, please correct Jenkins CR"
-		r.sendNewUserConfigurationFailedNotification(jenkins, message, messages)
-
-		logger.V(log.VWarn).Info(message)
-		for _, msg := range messages {
-			logger.V(log.VWarn).Info(msg)
-		}
-		return reconcile.Result{}, jenkins, nil // don't requeue
-	}
-
-	// Reconcile seedjobs, backups
-	result, err = userConfiguration.ReconcileOthers()
-	if err != nil {
-		return reconcile.Result{}, jenkins, err
-	}
-	if result.Requeue {
-		return result, jenkins, nil
-	}
-
-	if jenkins.Status.UserConfigurationCompletedTime == nil {
-		now := metav1.Now()
-		jenkins.Status.UserConfigurationCompletedTime = &now
-		err = r.client.Update(context.TODO(), jenkins)
-		if err != nil {
-			return reconcile.Result{}, jenkins, errors.WithStack(err)
-		}
-		time := jenkins.Status.UserConfigurationCompletedTime.Sub(jenkins.Status.ProvisionStartTime.Time)
-		message := fmt.Sprintf("User configuration phase is complete, took %s", time)
-		r.sendNewUserConfigurationCompleteNotification(jenkins, message)
-		logger.Info(message)
-	}*/
-	return reconcile.Result{}, jenkins, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *JenkinsReconciler) sendNewBaseConfigurationFailedNotification(jenkins *v1alpha2.Jenkins, message string, baseMessages []string) {
@@ -491,27 +473,11 @@ func (r *JenkinsReconciler) setDefaultsForContainer(jenkins *v1alpha2.Jenkins, c
 func isResourceRequirementsNotSet(requirements corev1.ResourceRequirements) bool {
 	return reflect.DeepEqual(requirements, corev1.ResourceRequirements{})
 }
-
 func basePlugins() (result []v1alpha2.Plugin) {
 	for _, value := range plugins.BasePlugins() {
 		result = append(result, v1alpha2.Plugin{Name: value.Name, Version: value.Version})
 	}
 	return
-}
-
-func (r *JenkinsReconciler) handleDeprecatedData(jenkins *jenkinsv1alpha2.Jenkins) (requeue bool, err error) {
-	changed := false
-	logger := r.Log.WithValues("cr", jenkins.Name)
-	if len(jenkins.Spec.Master.AnnotationsDeprecated) > 0 {
-		changed = true
-		jenkins.Spec.Master.Annotations = jenkins.Spec.Master.AnnotationsDeprecated
-		jenkins.Spec.Master.AnnotationsDeprecated = map[string]string{}
-		logger.V(log.VWarn).Info("spec.master.masterAnnotations is deprecated, the annotations have been moved to spec.master.annotations")
-	}
-	if changed {
-		return changed, errors.WithStack(r.Client.Update(context.TODO(), jenkins))
-	}
-	return changed, nil
 }
 
 func (r *JenkinsReconciler) isJenkinsPodTerminating(err error) bool {

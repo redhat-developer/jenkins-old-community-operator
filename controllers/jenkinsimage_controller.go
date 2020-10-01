@@ -41,6 +41,15 @@ type JenkinsImageReconciler struct {
 	Scheme    *runtime.Scheme
 }
 
+func (r *JenkinsImageReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&jenkinsv1alpha2.JenkinsImage{}).
+		Owns(&corev1.Pod{}).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.Secret{}).
+		Complete(r)
+}
+
 // +kubebuilder:rbac:groups=jenkins.jenkins.io,resources=jenkinsimages,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=jenkins.jenkins.io,resources=jenkinsimages/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
@@ -74,16 +83,16 @@ func (r *JenkinsImageReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 	// Check if this ConfigMap already exists
 	foundConfigMap := &corev1.ConfigMap{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: dockerfile.Name, Namespace: dockerfile.Namespace}, foundConfigMap)
-	if err != nil && apierrors.IsNotFound(err) {
-		reqLogger.Info("Creating a new ConfigMap", "ConfigMap.Namespace", dockerfile.Namespace, "ConfigMap.Name", dockerfile.Name)
-		err = r.Client.Create(context.TODO(), dockerfile)
-		if err != nil {
-			return ctrl.Result{}, err
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			reqLogger.Info("Creating a new ConfigMap", "ConfigMap.Namespace", dockerfile.Namespace, "ConfigMap.Name", dockerfile.Name)
+			err = r.Client.Create(context.TODO(), dockerfile)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			// ConfigMap created successfully - don't requeue
+			return ctrl.Result{}, nil
 		}
-		// ConfigMap created successfully - don't requeue
-		return ctrl.Result{}, nil
-	} else if err != nil {
-		return ctrl.Result{}, err
 	}
 	// ConfigMap already exists - don't requeue
 	reqLogger.Info("Skip reconcile: ConfigMap already exists", "ConfigMap.Namespace", foundConfigMap.Namespace, "ConfigMap.Name", foundConfigMap.Name)
@@ -92,32 +101,25 @@ func (r *JenkinsImageReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 	pod := resources.NewBuilderPod(instance, &r.clientSet)
 	// Set JenkinsImage instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, pod, r.Scheme); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	// Check if this Pod already exists
 	foundPod := &corev1.Pod{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, foundPod)
-	if err != nil && apierrors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-		err = r.Client.Create(context.TODO(), pod)
-		if err != nil {
-			return ctrl.Result{}, err
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
+			err = r.Client.Create(context.TODO(), pod)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			// Pod created successfully - don't requeue
+			return ctrl.Result{}, nil
 		}
-
-		// Pod created successfully - don't requeue
-		return ctrl.Result{}, nil
-	} else if err != nil {
-		return ctrl.Result{}, err
 	}
 	// Pod already exists - don't requeue
 	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", foundPod.Namespace, "Pod.Name", foundPod.Name)
 
 	return ctrl.Result{}, nil
-}
-
-func (r *JenkinsImageReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&jenkinsv1alpha2.JenkinsImage{}).
-		Complete(r)
 }

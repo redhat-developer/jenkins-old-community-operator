@@ -260,7 +260,6 @@ func GetJenkinsMasterContainerBaseVolumeMounts(jenkins *v1alpha2.Jenkins) []core
 			})
 		}
 	}
-
 	return volumeMounts
 }
 

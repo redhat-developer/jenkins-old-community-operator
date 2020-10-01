@@ -19,7 +19,6 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: Jenkins is the Schema for the jenkins API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -108,11 +107,9 @@ spec:
                   - name
                   type: object
               required:
-              - configurations
               - defaultConfig
               - enableAutoReload
               - enabled
-              - secret
               type: object
             jenkinsAPISettings:
               description: JenkinsAPISettings defines configuration used by the operator

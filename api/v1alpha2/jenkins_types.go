@@ -97,8 +97,8 @@ type ConfigMapRef struct {
 type Configuration struct {
 	Enabled          bool           `json:"enabled"`
 	DefaultConfig    bool           `json:"defaultConfig"`
-	Secret           SecretRef      `json:"secret"`
-	Configurations   []ConfigMapRef `json:"configurations"`
+	Secret           SecretRef      `json:"secret,omitempty"`
+	Configurations   []ConfigMapRef `json:"configurations,omitempty"`
 	EnableAutoReload bool           `json:"enableAutoReload"`
 }
 
@@ -463,6 +463,7 @@ type Service struct {
 
 // JenkinsStatus defines the observed state of Jenkins
 // +k8s:openapi-gen=true
+// +operator-sdk:csv:customresourcedefinitions.type=status
 type JenkinsStatus struct {
 	// OperatorVersion is the operator version which manages this CR
 	// +optional
@@ -523,6 +524,7 @@ type JenkinsStatus struct {
 // +k8s:openapi-gen=true
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+
 type Jenkins struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
