@@ -14,7 +14,7 @@ import (
 	stackerr "github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	reconcile "sigs.k8s.io/controller-runtime"
 )
 
 func (r *JenkinsReconcilerBaseConfiguration) ensureJenkinsDeploymentIsReady() (reconcile.Result, error) {

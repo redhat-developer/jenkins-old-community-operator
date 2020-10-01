@@ -18,15 +18,12 @@ package controllers
 
 import (
 	"context"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"github.com/go-logr/logr"
+	jenkinsv1alpha2 "github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	jenkinsv1alpha2 "github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 
@@ -59,7 +56,7 @@ func (r *JenkinsImageReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			return reconcile.Result{}, nil
+			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
@@ -69,7 +66,7 @@ func (r *JenkinsImageReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 	dockerfile := resources.NewDockerfileConfigMap(instance)
 	// Set JenkinsImage instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, dockerfile, r.Scheme); err != nil {
-		return reconcile.Result{}, err
+		return ctrl.Result{}, err
 	}
 
 	// Check if this ConfigMap already exists
@@ -79,12 +76,12 @@ func (r *JenkinsImageReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 		reqLogger.Info("Creating a new ConfigMap", "ConfigMap.Namespace", dockerfile.Namespace, "ConfigMap.Name", dockerfile.Name)
 		err = r.Client.Create(context.TODO(), dockerfile)
 		if err != nil {
-			return reconcile.Result{}, err
+			return ctrl.Result{}, err
 		}
 		// ConfigMap created successfully - don't requeue
-		return reconcile.Result{}, nil
+		return ctrl.Result{}, nil
 	} else if err != nil {
-		return reconcile.Result{}, err
+		return ctrl.Result{}, err
 	}
 	// ConfigMap already exists - don't requeue
 	reqLogger.Info("Skip reconcile: ConfigMap already exists", "ConfigMap.Namespace", foundConfigMap.Namespace, "ConfigMap.Name", foundConfigMap.Name)
@@ -93,7 +90,7 @@ func (r *JenkinsImageReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 	pod := resources.NewBuilderPod(instance, &r.clientSet)
 	// Set JenkinsImage instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, pod, r.Scheme); err != nil {
-		return reconcile.Result{}, err
+		return ctrl.Result{}, err
 	}
 
 	// Check if this Pod already exists
@@ -103,13 +100,13 @@ func (r *JenkinsImageReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 		reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
 		err = r.Client.Create(context.TODO(), pod)
 		if err != nil {
-			return reconcile.Result{}, err
+			return ctrl.Result{}, err
 		}
 
 		// Pod created successfully - don't requeue
 		return ctrl.Result{}, nil
 	} else if err != nil {
-		return reconcile.Result{}, err
+		return ctrl.Result{}, err
 	}
 	// Pod already exists - don't requeue
 	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", foundPod.Namespace, "Pod.Name", foundPod.Name)

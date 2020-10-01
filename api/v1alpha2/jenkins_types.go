@@ -21,7 +21,7 @@ type JenkinsSpec struct {
 	//JenkinsImageRef a reference to a JenkinsImage in the current namespace. The JenkinsImage must have
 	// status to be "SuccessfullyBuilt" ; then the image target image in JenkinsImage.To will be used
 	// as the image of the Master container.
-	JenkinsImageRef JenkinsImage `json:"jenkinsImageRef,omitempty"`
+	JenkinsImageRef string `json:"jenkinsImageRef,omitempty"`
 
 	// Notifications defines list of a services which are used to inform about Jenkins status
 	// Can be used to integrate chat services like Slack, Microsoft Teams or Mailgun

@@ -19,14 +19,24 @@ package main
 import (
 	"flag"
 	"fmt"
-	//"github.com/spf13/pflag"
+	"github.com/jenkinsci/kubernetes-operator/pkg/client"
+	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
+	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
+	"github.com/jenkinsci/kubernetes-operator/pkg/event"
+	"github.com/jenkinsci/kubernetes-operator/pkg/notifications"
+	e "github.com/jenkinsci/kubernetes-operator/pkg/notifications/event"
+	routev1 "github.com/openshift/api/route/v1"
+	"github.com/pkg/errors"
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"os"
 	currentruntime "runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -50,6 +60,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(jenkinsv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(routev1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -57,12 +68,61 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	parsePglags(metricsAddr, enableLeaderElection)
+	hostname := pflag.String("jenkins-api-hostname", "", "Hostname or IP of Jenkins API. It can be service name, node IP or localhost.")
+	port := pflag.Int("jenkins-api-port", 0, "The port on which Jenkins API is running. Note: If you want to use nodePort don't set this setting and --jenkins-api-use-nodeport must be true.")
+	useNodePort := pflag.Bool("jenkins-api-use-nodeport", false, "Connect to Jenkins API using the service nodePort instead of service port. If you want to set this as true - don't set --jenkins-api-port.")
+	debug := pflag.Bool("debug", false, "Set log level to debug")
 
 	mgr := initManager(metricsAddr, enableLeaderElection)
+
+	// get a config to talk to the apiserver
+	cfg, err := config.GetConfig()
+	if err != nil {
+		fatal(errors.Wrap(err, "failed to get config"), *debug)
+	}
+	setupLog.Info("Registering Components.")
+
+	// setup Scheme for all resources
+	//if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
+	//	fatal(errors.Wrap(err, "failed to setup scheme"), *debug)
+	//}
+
+	// setup events
+	events, err := event.New(cfg, constants.OperatorName)
+	if err != nil {
+		fatal(errors.Wrap(err, "failed to create manager"), *debug)
+	}
+
+	clientSet, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		fatal(errors.Wrap(err, "failed to create Kubernetes client set"), *debug)
+	}
+
+	if resources.IsRouteAPIAvailable(clientSet) {
+		setupLog.Info("Route API found: Route creation will be performed")
+	}
+
+	if resources.IsImageRegistryAvailable(clientSet) {
+		setupLog.Info("Internal Image Registry found: It is very likely that we are running on OpenShift")
+		setupLog.Info("If JenkinsImages are built without specified destination, they will be pushed into it.")
+	}
+
+	c := make(chan e.Event)
+	go notifications.Listen(c, events, mgr.GetClient())
+
+	// validate jenkins API connection
+	jenkinsAPIConnectionSettings := client.JenkinsAPIConnectionSettings{Hostname: *hostname, Port: *port, UseNodePort: *useNodePort}
+	if err := jenkinsAPIConnectionSettings.Validate(); err != nil {
+		fatal(errors.Wrap(err, "invalid command line parameters"), *debug)
+	}
+
+	// setup Jenkins controller
 	setupJenkinsRenconciler(mgr)
 	setupJenkinsImageRenconciler(mgr)
-	// +kubebuilder:scaffold:builder
+	// start the Cmd
+	setupLog.Info("Starting the Cmd.")
 	runMananger(mgr)
+	// +kubebuilder:scaffold:builder
 }
 
 func parsePglags(metricsAddr string, enableLeaderElection bool) {
@@ -70,10 +130,6 @@ func parsePglags(metricsAddr string, enableLeaderElection bool) {
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	//hostname := pflag.String("jenkins-api-hostname", "", "Hostname or IP of Jenkins API. It can be service name, node IP or localhost.")
-	//port := pflag.Int("jenkins-api-port", 0, "The port on which Jenkins API is running. Note: If you want to use nodePort don't set this setting and --jenkins-api-use-nodeport must be true.")
-	//useNodePort := pflag.Bool("jenkins-api-use-nodeport", false, "Connect to Jenkins API using the service nodePort instead of service port. If you want to set this as true - don't set --jenkins-api-port.")
-	//debug := pflag.Bool("debug", false, "Set log level to debug")
 	flag.Parse()
 	ctrl.SetLogger(kzap.New(kzap.UseDevMode(true)))
 }
@@ -94,6 +150,7 @@ func runMananger(mgr manager.Manager) {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+	setupLog.Info("manager started")
 }
 
 func startManager(metricsAddr string, enableLeaderElection bool) (manager.Manager, error) {
