@@ -43,6 +43,8 @@ type JenkinsImageReconciler struct {
 
 // +kubebuilder:rbac:groups=jenkins.jenkins.io,resources=jenkinsimages,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=jenkins.jenkins.io,resources=jenkinsimages/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;create;update;patch;delete
 
 func (r *JenkinsImageReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
