@@ -40,7 +40,7 @@ spec:
           memory: 500Mi
   configurationAsCode:
     enableAutoReload: true
-    enabled: true
+    enabled: false
     defaultConfig: false
   #seedJobs:
   #- id: jenkins-operator

@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/jenkinsci/kubernetes-operator/pkg/client"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
 	"github.com/jenkinsci/kubernetes-operator/pkg/event"
@@ -34,6 +33,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/rest"
 	"os"
 	currentruntime "runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,8 +48,6 @@ import (
 	//sdkVersion "github.com/operator-framework/operator-sdk/version"
 
 	kzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -70,61 +68,60 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	parsePglags(metricsAddr, enableLeaderElection)
-	hostname := pflag.String("jenkins-api-hostname", "", "Hostname or IP of Jenkins API. It can be service name, node IP or localhost.")
-	port := pflag.Int("jenkins-api-port", 0, "The port on which Jenkins API is running. Note: If you want to use nodePort don't set this setting and --jenkins-api-use-nodeport must be true.")
-	useNodePort := pflag.Bool("jenkins-api-use-nodeport", false, "Connect to Jenkins API using the service nodePort instead of service port. If you want to set this as true - don't set --jenkins-api-port.")
 	debug := pflag.Bool("debug", false, "Set log level to debug")
 
-	mgr := initManager(metricsAddr, enableLeaderElection)
+	setupLog.Info("Registering Components.")
+	manager := initManager(metricsAddr, enableLeaderElection)
+	restClient := getRestClient(debug)
+	eventsRecorder := getEventsRecorder(restClient, debug)
+	clientSet := getKubernetesClientSet(restClient, debug)
+	checkAvailableFeatures(clientSet)
 
+	notificationsChannel := make(chan e.Event)
+	go notifications.Listen(notificationsChannel, eventsRecorder, manager.GetClient())
+
+	// setup Jenkins controller
+	setupJenkinsRenconciler(manager, notificationsChannel)
+	setupJenkinsImageRenconciler(manager)
+	// start the Cmd
+	setupLog.Info("Starting the Cmd.")
+	runMananger(manager)
+	// +kubebuilder:scaffold:builder
+}
+
+func checkAvailableFeatures(clientSet *kubernetes.Clientset) {
+	if resources.IsRouteAPIAvailable(clientSet) {
+		setupLog.Info("Route API found: Route creation will be performed")
+	}
+	if resources.IsImageRegistryAvailable(clientSet) {
+		setupLog.Info("Internal Image Registry found: It is very likely that we are running on OpenShift")
+		setupLog.Info("If JenkinsImages are built without specified destination, they will be pushed into it.")
+	}
+}
+
+func getKubernetesClientSet(restClient *rest.Config, debug *bool) *kubernetes.Clientset {
+	clientSet, err := kubernetes.NewForConfig(restClient)
+	if err != nil {
+		fatal(errors.Wrap(err, "failed to create Kubernetes client set"), *debug)
+	}
+	return clientSet
+}
+
+func getEventsRecorder(cfg *rest.Config, debug *bool) event.Recorder {
+	events, err := event.New(cfg, constants.OperatorName)
+	if err != nil {
+		fatal(errors.Wrap(err, "failed to create manager"), *debug)
+	}
+	return events
+}
+
+func getRestClient(debug *bool) *rest.Config {
 	// get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
 		fatal(errors.Wrap(err, "failed to get config"), *debug)
 	}
-	setupLog.Info("Registering Components.")
-
-	// setup Scheme for all resources
-	//if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-	//	fatal(errors.Wrap(err, "failed to setup scheme"), *debug)
-	//}
-
-	// setup events
-	events, err := event.New(cfg, constants.OperatorName)
-	if err != nil {
-		fatal(errors.Wrap(err, "failed to create manager"), *debug)
-	}
-
-	clientSet, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		fatal(errors.Wrap(err, "failed to create Kubernetes client set"), *debug)
-	}
-
-	if resources.IsRouteAPIAvailable(clientSet) {
-		setupLog.Info("Route API found: Route creation will be performed")
-	}
-
-	if resources.IsImageRegistryAvailable(clientSet) {
-		setupLog.Info("Internal Image Registry found: It is very likely that we are running on OpenShift")
-		setupLog.Info("If JenkinsImages are built without specified destination, they will be pushed into it.")
-	}
-
-	notificationsChannel := make(chan e.Event)
-	go notifications.Listen(notificationsChannel, events, mgr.GetClient())
-
-	// validate jenkins API connection
-	jenkinsAPIConnectionSettings := client.JenkinsAPIConnectionSettings{Hostname: *hostname, Port: *port, UseNodePort: *useNodePort}
-	if err := jenkinsAPIConnectionSettings.Validate(); err != nil {
-		fatal(errors.Wrap(err, "invalid command line parameters"), *debug)
-	}
-
-	// setup Jenkins controller
-	setupJenkinsRenconciler(mgr, notificationsChannel)
-	setupJenkinsImageRenconciler(mgr)
-	// start the Cmd
-	setupLog.Info("Starting the Cmd.")
-	runMananger(mgr)
-	// +kubebuilder:scaffold:builder
+	return cfg
 }
 
 func parsePglags(metricsAddr string, enableLeaderElection bool) {
@@ -201,62 +198,6 @@ func newJenkinsImageRenconciler(mgr manager.Manager) *controllers.JenkinsImageRe
 		Scheme: mgr.GetScheme(),
 	}
 }
-
-func filterGKVsFromAddToScheme(gvks []schema.GroupVersionKind) []schema.GroupVersionKind {
-	// We use gkvFilters to filter from the existing GKVs defined in the used
-	// runtime.Schema for the operator. The reason for that is that
-	// kube-metrics tries to list all of the defined Kinds in the schemas
-	// that are passed, including Kinds that the operator doesn't use and
-	// thus the role used the operator doesn't have them set and we don't want
-	// to set as they are not used by the operator.
-	// For the fields that the filters have we have defined the value '*' to
-	// specify any will be a match (accepted)
-	matchAnyValue := "*"
-	gvkFilters := []schema.GroupVersionKind{
-		// Kubernetes Resources
-		{Kind: "PersistentVolumeClaim", Version: matchAnyValue},
-		{Kind: "ServiceAccount", Version: matchAnyValue},
-		{Kind: "Secret", Version: matchAnyValue},
-		{Kind: "Pod", Version: matchAnyValue},
-		{Kind: "ConfigMap", Version: matchAnyValue},
-		{Kind: "Service", Version: matchAnyValue},
-		{Group: "apps", Kind: "Deployment", Version: matchAnyValue},
-		// Openshift Resources
-		{Group: "route.openshift.io", Kind: "Route", Version: matchAnyValue},
-		{Group: "image.openshift.io", Kind: "ImageStream", Version: matchAnyValue},
-		// Custom Resources
-		{Group: "jenkins.io", Kind: "Jenkins", Version: matchAnyValue},
-		{Group: "jenkins.io", Kind: "JenkinsImage", Version: matchAnyValue},
-		{Group: "jenkins.io", Kind: "Casc", Version: matchAnyValue},
-	}
-
-	ownGVKs := []schema.GroupVersionKind{}
-	for _, gvk := range gvks {
-		for _, gvkFilter := range gvkFilters {
-			match := true
-			if gvkFilter.Kind == matchAnyValue && gvkFilter.Group == matchAnyValue && gvkFilter.Version == matchAnyValue {
-				setupLog.V(1).Info("gvkFilter should at least have one of its fields defined. Skipping...")
-				match = false
-			} else {
-				if gvkFilter.Kind != matchAnyValue && gvkFilter.Kind != gvk.Kind {
-					match = false
-				}
-				if gvkFilter.Group != matchAnyValue && gvkFilter.Group != gvk.Group {
-					match = false
-				}
-				if gvkFilter.Version != matchAnyValue && gvkFilter.Version != gvk.Version {
-					match = false
-				}
-			}
-			if match {
-				ownGVKs = append(ownGVKs, gvk)
-			}
-		}
-	}
-
-	return ownGVKs
-}
-
 func fatal(err error, debug bool) {
 	if debug {
 		setupLog.Error(nil, fmt.Sprintf("%+v", err))

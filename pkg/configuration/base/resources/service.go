@@ -81,4 +81,3 @@ func getClusterDomain() (string, error) {
 
 	return clusterDomain, nil
 }
-

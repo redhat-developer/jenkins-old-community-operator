@@ -3,5 +3,12 @@ kind: JenkinsImage
 metadata:
   name: jenkinsimage-sample
 spec:
-  # Add fields here
-  foo: bar
+  from:
+    name: jenkins/jenkins
+    tag: lts
+  plugins:
+  - name: kubernetes
+  to:
+    registry: quay.io/akram
+    name: jenkins-for-jim
+    tag: latest

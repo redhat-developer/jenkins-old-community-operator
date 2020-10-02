@@ -12,6 +12,7 @@ func (r *JenkinsReconcilerBaseConfiguration) createScriptsConfigMap(meta metav1.
 	if err != nil {
 		return err
 	}
+	r.logger.Info("Creating NewScriptsConfigMap !!!!!")
 	return stackerr.WithStack(r.CreateOrUpdateResource(configMap))
 }
 
@@ -20,5 +21,6 @@ func (r *JenkinsReconcilerBaseConfiguration) createInitConfigurationConfigMap(me
 	if err != nil {
 		return err
 	}
+	r.logger.Info("Creating configMap !!!!!")
 	return stackerr.WithStack(r.CreateOrUpdateResource(configMap))
 }

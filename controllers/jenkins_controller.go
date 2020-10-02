@@ -27,6 +27,8 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
+
 	//	"math/rand"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -100,7 +102,7 @@ func (r *JenkinsReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error)
 	_ = context.Background()
 	logger := r.Log.WithValues("jenkins", request.NamespacedName)
 	reconcileFailLimit := uint64(10)
-	logger.V(log.VDebug).Info(fmt.Sprintf("Reconciling Jenkins: %s", request.Name))
+	logger.V(log.VDebug).Info(fmt.Sprintf("Got a reconcialition request at: %+v for Jenkins: %s", time.Now(), request.Name))
 
 	// Fetch the Jenkins jenkins
 	jenkins := &jenkinsv1alpha2.Jenkins{}
@@ -179,7 +181,7 @@ func (r *JenkinsReconciler) reconcile(request ctrl.Request, jenkins *v1alpha2.Je
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	config := r.newReconcilierConfiguration(jenkins)
+	config := r.newReconcilerConfiguration(jenkins)
 	// Reconcile base configuration
 	logger.V(log.VDebug).Info("Starting base configuration reconciliation for validation")
 	baseConfiguration := base.New(config, r.jenkinsAPIConnectionSettings)
@@ -207,16 +209,15 @@ func (r *JenkinsReconciler) reconcile(request ctrl.Request, jenkins *v1alpha2.Je
 			jenkins.Status.Phase = constants.JenkinsStatusReinitializing
 			jenkins.Status.BaseConfigurationCompletedTime = nil
 			// update Jenkins CR Status from Completed to Reinitializing
-			err = r.Client.Update(context.TODO(), jenkins)
-			if err != nil {
-				return reconcile.Result{}, errors.WithStack(err)
-			}
+			//err = r.Client.Update(context.TODO(), jenkins)
+			//if err != nil {
+			//	return reconcile.Result{}, errors.WithStack(err)
+			//}
 			logger.Info("Base configuration reinitialized, jenkins pod restarted")
-			return ctrl.Result{Requeue: true}, err
+			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 		logger.V(log.VDebug).Info(fmt.Sprintf("Base configuration reconciliation failed with error, requeuing:  %s ", err))
-		//FIXME What we do not requeue ?
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 	logger.V(log.VDebug).Info("Base configuration reconciliation successful.")
 	// Re-reading Jenkins
@@ -246,11 +247,11 @@ func (r *JenkinsReconciler) reconcile(request ctrl.Request, jenkins *v1alpha2.Je
 		if jenkins.Status.ProvisionStartTime == nil {
 			jenkins.Status.ProvisionStartTime = &deployment.CreationTimestamp
 		}
-		err = r.Client.Update(context.TODO(), jenkins)
-		if err != nil {
-			logger.Info(fmt.Sprintf("Error while updating jenkins instance: %s  , status: %+v", jenkins.Name, jenkins.Status))
-			return ctrl.Result{Requeue: true}, errors.WithStack(err)
-		}
+		//err = r.Client.Update(context.TODO(), jenkins)
+		//if err != nil {
+		//	logger.Info(fmt.Sprintf("Error while updating jenkins instance: %s  , status: %+v", jenkins.Name, jenkins.Status))
+		//	return ctrl.Result{Requeue: true}, errors.WithStack(err)
+		//}
 		logger.Info(fmt.Sprintf("Base configuration updated: BaseConfigurationCompletedTime: %s", jenkins.Status.BaseConfigurationCompletedTime))
 		if jenkins.Status.ProvisionStartTime == nil {
 			logger.Info(fmt.Sprintf("ProvisionStartTime is nil: requeuing : %s", jenkins.Status.ProvisionStartTime))
@@ -273,7 +274,7 @@ func (r *JenkinsReconciler) sendNewBaseConfigurationFailedNotification(jenkins *
 	}
 }
 
-func (r *JenkinsReconciler) newReconcilierConfiguration(jenkins *v1alpha2.Jenkins) configuration.Configuration {
+func (r *JenkinsReconciler) newReconcilerConfiguration(jenkins *v1alpha2.Jenkins) configuration.Configuration {
 	config := configuration.Configuration{
 		Client:                       r.Client,
 		ClientSet:                    r.clientSet,
