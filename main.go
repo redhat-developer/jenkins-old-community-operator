@@ -45,7 +45,7 @@ import (
 	jenkinsv1alpha2 "github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	"github.com/jenkinsci/kubernetes-operator/controllers"
 	"github.com/jenkinsci/kubernetes-operator/version"
-	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	//sdkVersion "github.com/operator-framework/operator-sdk/version"
 
 	kzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -271,5 +271,4 @@ func printInfo() {
 	setupLog.Info(fmt.Sprintf("Git commit: %s", version.GitCommit))
 	setupLog.Info(fmt.Sprintf("Go Version: %s", currentruntime.Version()))
 	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", currentruntime.GOOS, currentruntime.GOARCH))
-	setupLog.Info(fmt.Sprintf("operator-sdk Version: %v", sdkVersion.Version))
 }
