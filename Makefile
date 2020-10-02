@@ -8,6 +8,7 @@ help:  ## Display this help message
 	@grep -E '^[a-zA-Z_0-9%-]+:.*?## .*$$' $(word 1,$(MAKEFILE_LIST)) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "${TARGET_COLOR}%-30s${RESET} %s\n", $$1, $$2}'
 
 all: manager
+build: manager
 
 test: generate manifests ## Run tests
 	go test ./... -coverprofile cover.out
@@ -62,7 +63,7 @@ bundle: manifests ## Generate bundle manifests and metadata, then validate gener
 
 # find or download controller-gen
 # download controller-gen if necessary
-controller-gen: 
+controller-gen: FORCE
 ifeq (, $(shell which controller-gen))
 	@{ \
 	set -e ;\
@@ -92,4 +93,5 @@ else
 KUSTOMIZE=$(shell which kustomize)
 endif
 
-
+FORCE:
+	@echo ""
