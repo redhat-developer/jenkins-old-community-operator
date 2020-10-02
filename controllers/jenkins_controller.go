@@ -99,7 +99,7 @@ func (r *JenkinsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list
 
 func (r *JenkinsReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+	ctx := context.Background()
 	logger := r.Log.WithValues("jenkins", request.NamespacedName)
 	reconcileFailLimit := uint64(10)
 	logger.V(log.VDebug).Info(fmt.Sprintf("Got a reconcialition request at: %+v for Jenkins: %s", time.Now(), request.Name))
@@ -117,8 +117,7 @@ func (r *JenkinsReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error)
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
-
-	result, err := r.reconcile(request, jenkins)
+	result, err := r.reconcile(ctx, request, jenkins)
 	if err != nil {
 		return result, err
 	}
@@ -162,14 +161,10 @@ func (r *JenkinsReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error)
 		logger.V(log.VWarn).Info(fmt.Sprintf("Requeing: !!! Reconcile loop failed: %+v", err))
 		return ctrl.Result{Requeue: false}, nil
 	}
-	/*if result.Requeue && result.RequeueAfter == 0 {
-		result.RequeueAfter = time.Duration(rand.Intn(10)) * time.Second
-	}*/
-	logger.Info(fmt.Sprintf("Reconcile loop success !!!"))
 	return ctrl.Result{}, nil
 }
 
-func (r *JenkinsReconciler) reconcile(request ctrl.Request, jenkins *v1alpha2.Jenkins) (ctrl.Result, error) {
+func (r *JenkinsReconciler) reconcile(ctx context.Context, request ctrl.Request, jenkins *v1alpha2.Jenkins) (ctrl.Result, error) {
 	logger := r.Log.WithValues("cr", request.Name)
 	var err error
 	var requeue bool
@@ -208,11 +203,6 @@ func (r *JenkinsReconciler) reconcile(request ctrl.Request, jenkins *v1alpha2.Je
 			logger.Info(fmt.Sprintf("Jenkins Pod in Terminating state with DeletionTimestamp set detected. Changing Jenkins Phase to %s", constants.JenkinsStatusReinitializing))
 			jenkins.Status.Phase = constants.JenkinsStatusReinitializing
 			jenkins.Status.BaseConfigurationCompletedTime = nil
-			// update Jenkins CR Status from Completed to Reinitializing
-			//err = r.Client.Update(context.TODO(), jenkins)
-			//if err != nil {
-			//	return reconcile.Result{}, errors.WithStack(err)
-			//}
 			logger.Info("Base configuration reinitialized, jenkins pod restarted")
 			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 		}
@@ -247,11 +237,6 @@ func (r *JenkinsReconciler) reconcile(request ctrl.Request, jenkins *v1alpha2.Je
 		if jenkins.Status.ProvisionStartTime == nil {
 			jenkins.Status.ProvisionStartTime = &deployment.CreationTimestamp
 		}
-		//err = r.Client.Update(context.TODO(), jenkins)
-		//if err != nil {
-		//	logger.Info(fmt.Sprintf("Error while updating jenkins instance: %s  , status: %+v", jenkins.Name, jenkins.Status))
-		//	return ctrl.Result{Requeue: true}, errors.WithStack(err)
-		//}
 		logger.Info(fmt.Sprintf("Base configuration updated: BaseConfigurationCompletedTime: %s", jenkins.Status.BaseConfigurationCompletedTime))
 		if jenkins.Status.ProvisionStartTime == nil {
 			logger.Info(fmt.Sprintf("ProvisionStartTime is nil: requeuing : %s", jenkins.Status.ProvisionStartTime))
@@ -260,8 +245,17 @@ func (r *JenkinsReconciler) reconcile(request ctrl.Request, jenkins *v1alpha2.Je
 		time := jenkins.Status.BaseConfigurationCompletedTime.Sub(jenkins.Status.ProvisionStartTime.Time)
 		message := fmt.Sprintf("Base configuration phase is complete, took %s", time)
 		r.sendNewBaseConfigurationCompleteNotification(jenkins, message)
+		//logger.V(log.VWarn).Info(fmt.Sprintf("Comparing old and new status: %+v\n\n%+v", status, jenkins.Status))
+		err = r.Status().Update(ctx, jenkins)
+		if err != nil {
+			logger.Error(err, "Failed to update Jenkins status")
+			return ctrl.Result{}, err
+		}
+
+		logger.Info(fmt.Sprintf("Reconcile loop success !!!"))
 		logger.Info(message)
 	}
+
 	return ctrl.Result{}, nil
 }
 

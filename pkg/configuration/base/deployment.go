@@ -22,7 +22,7 @@ func (r *JenkinsReconcilerBaseConfiguration) ensureJenkinsDeploymentIsReady(requ
 		r.logger.Info(fmt.Sprintf("Error while getting Deployment %s: %s", deploymentName, err))
 		return ctrl.Result{Requeue: true}, stackerr.WithStack(err)
 	}
-	status := r.Jenkins.Status
+	status := &r.Jenkins.Status
 	if jenkinsDeployment.Status.AvailableReplicas == 0 {
 		r.logger.Info(fmt.Sprintf("Deployment %s still does not have available replicas", deploymentName))
 		return ctrl.Result{Requeue: true}, err

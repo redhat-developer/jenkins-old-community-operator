@@ -464,6 +464,7 @@ type Service struct {
 // JenkinsStatus defines the observed state of Jenkins
 // +k8s:openapi-gen=true
 // +operator-sdk:csv:customresourcedefinitions.type=status
+
 type JenkinsStatus struct {
 	// OperatorVersion is the operator version which manages this CR
 	// +optional

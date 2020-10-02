@@ -30,7 +30,6 @@ func (r *JenkinsReconcilerBaseConfiguration) createRoute(meta metav1.ObjectMeta,
 				return stackerr.WithStack(err)
 			}
 		}
-		r.logger.Error(err, fmt.Sprintf("Error while getting Route: %+v : error: %+v", route, err))
 		return stackerr.WithStack(err)
 	}
 	route.ObjectMeta.Labels = meta.Labels // make sure that user won't break service by hand
