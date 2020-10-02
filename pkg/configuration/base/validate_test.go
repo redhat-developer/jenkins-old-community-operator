@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/jenkinsci/kubernetes-operator/pkg/apis/jenkins/v1alpha2"
+	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	"github.com/jenkinsci/kubernetes-operator/pkg/client"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
@@ -137,7 +137,7 @@ func TestValidatePlugins(t *testing.T) {
 	})
 }
 
-func TestReconcileJenkinsBaseConfiguration_validateImagePullSecrets(t *testing.T) {
+func TestJenkinsReconcilerBaseConfiguration_validateImagePullSecrets(t *testing.T) {
 	t.Run("happy", func(t *testing.T) {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
