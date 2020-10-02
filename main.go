@@ -19,6 +19,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	currentruntime "runtime"
+
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
 	"github.com/jenkinsci/kubernetes-operator/pkg/event"
@@ -34,8 +37,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
-	"os"
-	currentruntime "runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -45,6 +46,7 @@ import (
 	jenkinsv1alpha2 "github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	"github.com/jenkinsci/kubernetes-operator/controllers"
 	"github.com/jenkinsci/kubernetes-operator/version"
+
 	//sdkVersion "github.com/operator-framework/operator-sdk/version"
 
 	kzap "sigs.k8s.io/controller-runtime/pkg/log/zap"

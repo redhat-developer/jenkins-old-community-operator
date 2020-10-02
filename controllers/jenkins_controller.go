@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
@@ -27,18 +29,19 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 
 	//	"math/rand"
 	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
+
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/jenkinsci/kubernetes-operator/pkg/log"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
 	//"time"
 
 	"github.com/go-logr/logr"
@@ -47,7 +50,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
-	jenkinsv1alpha2 "github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	jenkinsclient "github.com/jenkinsci/kubernetes-operator/pkg/client"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration"
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications/event"
@@ -83,7 +85,7 @@ var reconcileErrors = map[string]reconcileError{}
 
 func (r *JenkinsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&jenkinsv1alpha2.Jenkins{}).
+		For(&v1alpha2.Jenkins{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
@@ -105,7 +107,7 @@ func (r *JenkinsReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error)
 	logger.V(log.VDebug).Info(fmt.Sprintf("Got a reconcialition request at: %+v for Jenkins: %s", time.Now(), request.Name))
 
 	// Fetch the Jenkins jenkins
-	jenkins := &jenkinsv1alpha2.Jenkins{}
+	jenkins := &v1alpha2.Jenkins{}
 	err := r.Client.Get(context.TODO(), request.NamespacedName, jenkins)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -252,7 +254,7 @@ func (r *JenkinsReconciler) reconcile(ctx context.Context, request ctrl.Request,
 			return ctrl.Result{}, err
 		}
 
-		logger.Info(fmt.Sprintf("Reconcile loop success !!!"))
+		logger.Info("Reconcile loop success !!!")
 		logger.Info(message)
 	}
 

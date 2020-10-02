@@ -284,7 +284,7 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 				return err
 			}
 			if len(files) == 0 {
-				//case empty directory
+				// case empty directory
 				hdr, _ := tar.FileInfoHeader(stat, fpath)
 				hdr.Name = destFile
 				if err := tw.WriteHeader(hdr); err != nil {
@@ -298,7 +298,7 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 			}
 			return nil
 		} else if stat.Mode()&os.ModeSymlink != 0 {
-			//case soft link
+			// case soft link
 			hdr, _ := tar.FileInfoHeader(stat, fpath)
 			target, err := os.Readlink(fpath)
 			if err != nil {
@@ -311,7 +311,7 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 				return err
 			}
 		} else {
-			//case regular file or other file type like pipe
+			// case regular file or other file type like pipe
 			hdr, err := tar.FileInfoHeader(stat, fpath)
 			if err != nil {
 				return err
@@ -365,17 +365,19 @@ func (o *CopyOptions) untarAll(src fileSpec, reader io.Reader, destDir, prefix s
 
 		if !isDestRelative(destDir, destFileName) {
 			fmt.Fprintf(o.IOStreams.ErrOut, "warning: file %q is outside target destination, skipping\n", destFileName)
+
 			continue
 		}
 
 		baseName := filepath.Dir(destFileName)
-		if err := os.MkdirAll(baseName, 0755); err != nil {
+		if err := os.MkdirAll(baseName, 0o755); err != nil {
 			return err
 		}
 		if header.FileInfo().IsDir() {
-			if err := os.MkdirAll(destFileName, 0755); err != nil {
+			if err := os.MkdirAll(destFileName, 0o755); err != nil {
 				return err
 			}
+
 			continue
 		}
 
@@ -383,9 +385,11 @@ func (o *CopyOptions) untarAll(src fileSpec, reader io.Reader, destDir, prefix s
 			if !symlinkWarningPrinted && len(o.ExecParentCmdName) > 0 {
 				fmt.Fprintf(o.IOStreams.ErrOut, "warning: skipping symlink: %q -> %q (consider using \"%s exec -n %q %q -- tar cf - %q | tar xf -\")\n", destFileName, header.Linkname, o.ExecParentCmdName, src.PodNamespace, src.PodName, src.File)
 				symlinkWarningPrinted = true
+
 				continue
 			}
 			fmt.Fprintf(o.IOStreams.ErrOut, "warning: skipping symlink: %q -> %q\n", destFileName, header.Linkname)
+
 			continue
 		}
 		outFile, err := os.Create(destFileName)

@@ -1,6 +1,6 @@
 FROM registry.access.redhat.com/ubi8/ubi:latest AS builder
 
-ARG GO_PACKAGE_PATH=github.com/jenkinsci/jenkins-operator
+ARG GO_PACKAGE_PATH=github.com/jenkinsci/kubernetes-operator
 
 # Basics
 ENV GIT_COMMITTER_NAME="OpenShift Developer Sevices"
@@ -49,19 +49,14 @@ COPY internal/ internal/
 COPY config/ config/
 COPY scripts/ scripts/
 COPY go.mod go.sum LICENSE Makefile ./
-RUN ls -la
 ARG VERBOSE=2
 RUN make build
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal
-
 LABEL com.redhat.delivery.appregistry=true
 LABEL maintainer "openshift-dev-services+jenkins@redhat.com"
 ENV LANG=en_US.utf8
-ENV OPERATOR_NAME=jenkins-operator
-ENV OPERATOR=/usr/local/bin/$OPERATOR_NAME
 ENV GOPATH=/tmp/go
 
-COPY --from=builder $GOPATH/src/github.com/jenkinsci/jenkins-operator/build/_output/bin/${OPERATOR_NAME} ${OPERATOR}
-
+COPY --from=builder /tmp/go/src/github.com/jenkinsci/kubernetes-operator/build/_output/bin/jenkins-operator /usr/local/bin/jenkins-operator
 ENTRYPOINT [ "/usr/local/bin/jenkins-operator" ]

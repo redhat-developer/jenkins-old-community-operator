@@ -19,7 +19,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	reconcile "sigs.k8s.io/controller-runtime"
 )
 
@@ -44,7 +43,7 @@ func New(config configuration.Configuration, jenkinsAPIConnectionSettings jenkin
 }
 
 // Reconcile takes care of base configuration.
-func (r *JenkinsReconcilerBaseConfiguration) Reconcile(request ctrl.Request) (reconcile.Result, jenkinsclient.Jenkins, error) {
+func (r *JenkinsReconcilerBaseConfiguration) Reconcile(request reconcile.Request) (reconcile.Result, jenkinsclient.Jenkins, error) {
 	jenkinsConfig := resources.NewResourceObjectMeta(r.Configuration.Jenkins)
 	// Create Necessary Resources
 	err := r.ensureResourcesRequiredForJenkinsDeploymentArePresent(jenkinsConfig)
@@ -53,7 +52,7 @@ func (r *JenkinsReconcilerBaseConfiguration) Reconcile(request ctrl.Request) (re
 	}
 	r.logger.V(log.VDebug).Info("Kubernetes resources are present")
 
-	result, err := r.ensureJenkinsDeploymentIsPresent(jenkinsConfig, request)
+	result, err := r.ensureJenkinsDeploymentIsPresent(jenkinsConfig)
 	if err != nil {
 		r.logger.V(log.VDebug).Info(fmt.Sprintf("Error when ensuring if Jenkins Deployment is present %s", err))
 		return reconcile.Result{}, nil, err
@@ -188,6 +187,7 @@ func compareImagePullSecrets(expected, actual []corev1.LocalObjectReference) boo
 		for _, actual := range actual {
 			if expected.Name == actual.Name {
 				found = true
+
 				break
 			}
 		}

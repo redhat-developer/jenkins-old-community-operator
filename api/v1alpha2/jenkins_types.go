@@ -14,11 +14,11 @@ type JenkinsSpec struct {
 	// Every single change here requires a pod restart.
 	Master JenkinsMaster `json:"master"`
 
-	//WIP: Still need to determine if  a reference to JenkinsImage is sufficient or if we need a
+	// WIP: Still need to determine if  a reference to JenkinsImage is sufficient or if we need a
 	// JenkinsImageBuild object to point to a specific build.
 	// If JenkinsImageRef is set, we need delete the pod to re-trigger a build
 
-	//JenkinsImageRef a reference to a JenkinsImage in the current namespace. The JenkinsImage must have
+	// JenkinsImageRef a reference to a JenkinsImage in the current namespace. The JenkinsImage must have
 	// status to be "SuccessfullyBuilt" ; then the image target image in JenkinsImage.To will be used
 	// as the image of the Master container.
 	JenkinsImageRef string `json:"jenkinsImageRef,omitempty"`

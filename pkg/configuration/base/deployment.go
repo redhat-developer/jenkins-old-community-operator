@@ -2,6 +2,7 @@ package base
 
 import (
 	"fmt"
+
 	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
@@ -38,7 +39,7 @@ func (r *JenkinsReconcilerBaseConfiguration) ensureJenkinsDeploymentIsReady(requ
 	return ctrl.Result{}, nil
 }
 
-func (r *JenkinsReconcilerBaseConfiguration) ensureJenkinsDeploymentIsPresent(meta metav1.ObjectMeta, request ctrl.Request) (ctrl.Result, error) {
+func (r *JenkinsReconcilerBaseConfiguration) ensureJenkinsDeploymentIsPresent(meta metav1.ObjectMeta) (ctrl.Result, error) {
 	jenkinsDeployment, err := r.GetJenkinsDeployment()
 	jenkins := r.Jenkins
 	namespace := jenkins.Namespace

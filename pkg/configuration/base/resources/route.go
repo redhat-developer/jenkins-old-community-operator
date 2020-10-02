@@ -9,11 +9,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//RouteKind the kind name for route
+// RouteKind the kind name for route
 const RouteKind = "Route"
 
-var isRouteAPIAvailable = false
-var routeAPIChecked = false
+var (
+	isRouteAPIAvailable = false
+	routeAPIChecked     = false
+)
 
 // UpdateRoute returns new route matching the service
 func UpdateRoute(actual routev1.Route, jenkins *v1alpha2.Jenkins) routev1.Route {
@@ -29,7 +31,7 @@ func UpdateRoute(actual routev1.Route, jenkins *v1alpha2.Jenkins) routev1.Route 
 	return actual
 }
 
-//IsRouteAPIAvailable tells if the Route API is installed and discoverable
+// IsRouteAPIAvailable tells if the Route API is installed and discoverable
 func IsRouteAPIAvailable(clientSet *kubernetes.Clientset) bool {
 	if routeAPIChecked {
 		return isRouteAPIAvailable

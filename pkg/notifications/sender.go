@@ -14,7 +14,6 @@ import (
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications/msteams"
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications/slack"
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications/smtp"
-
 	"github.com/pkg/errors"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 )

@@ -1,5 +1,6 @@
 include scripts/commons.mk
 include scripts/colors.mk
+include scripts/golang-tools.mk
 
 ## This makefile is self documented: To set comment, add ## after the target
 help:  ## Display this help message
@@ -32,11 +33,23 @@ deploy: manifests kustomize ## Deploy controller in the configured Kubernetes cl
 manifests: controller-gen ## Generate manifests e.g. CRD, RBAC etc.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
-fmt: ## Run go fmt against code
+fmt: ## Run go fmt against code : formats the code
 	go fmt ./...
 
-vet: ## Run go vet against code
+vet: ## Run go vet against code : check bugs
 	go vet ./...
+
+lint: golangci goimports  ## Run golangci-lint against code : check formattung and bugs
+
+GOLANGCI_LINT_CACHE := $(shell pwd)/build/_output/golangci-lint-cache
+XDG_CACHE_HOME := $(shell pwd)/build/_output/xdgcache
+GOCACHE := $(shell pwd)/build/_output/gocache
+
+
+golangci: install-golangci
+	GOLANGCI_LINT_CACHE=$(GOLANGCI_LINT_CACHE) XDG_CACHE_HOME=$(XDG_CACHE_HOME) GOCACHE=$(GOCACHE) golangci-lint run
+goimports: install-goimports
+	@goimports -w -l -e $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 generate: controller-gen ## Generate code
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -61,37 +74,6 @@ bundle: manifests ## Generate bundle manifests and metadata, then validate gener
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen: FORCE
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
 
-kustomize:
-ifeq (, $(shell which kustomize))
-	@{ \
-	set -e ;\
-	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
-	}
-KUSTOMIZE=$(GOBIN)/kustomize
-else
-KUSTOMIZE=$(shell which kustomize)
-endif
 
-FORCE:
-	@echo ""
+## Refer to golang-tools.mk include for controller-gen, golangci-install, goimports-install targets

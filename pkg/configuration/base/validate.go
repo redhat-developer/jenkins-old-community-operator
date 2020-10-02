@@ -18,9 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var (
-	dockerImageRegexp = regexp.MustCompile(`^` + docker.TagRegexp.String() + `$`)
-)
+var dockerImageRegexp = regexp.MustCompile(`^` + docker.TagRegexp.String() + `$`)
 
 // Validate validates Jenkins CR Spec.master section
 func (r *JenkinsReconcilerBaseConfiguration) Validate(jenkins *v1alpha2.Jenkins) ([]string, error) {
@@ -292,6 +290,7 @@ func (r *JenkinsReconcilerBaseConfiguration) validateJenkinsMasterPodEnvs() []st
 		for requiredFlag := range requiredFlags {
 			if setFlag == requiredFlag {
 				requiredFlags[requiredFlag] = true
+
 				break
 			}
 		}
@@ -350,6 +349,7 @@ func (r *JenkinsReconcilerBaseConfiguration) verifyBasePlugins(requiredBasePlugi
 		for _, basePlugin := range basePlugins {
 			if requiredBasePlugin.Name == basePlugin.Name {
 				found = true
+
 				break
 			}
 		}

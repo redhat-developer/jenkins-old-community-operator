@@ -279,6 +279,7 @@ func NewJenkinsMasterContainer(jenkins *v1alpha2.Jenkins) corev1.Container {
 	for _, env := range jenkinsContainer.Env {
 		if env.Name == jenkinsHomeEnvVar.Name {
 			jenkinsHomeEnvVarExists = true
+
 			break
 		}
 	}

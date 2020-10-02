@@ -13,10 +13,8 @@ const (
 	Kind = "Jenkins"
 )
 
-var (
-	// SchemeGroupVersion is group version used to register these objects
-	SchemeGroupVersion = schema.GroupVersion{Group: "jenkins.io", Version: "v1alpha2"}
-)
+// SchemeGroupVersion is group version used to register these objects
+var SchemeGroupVersion = schema.GroupVersion{Group: "jenkins.io", Version: "v1alpha2"}
 
 // GetObjectKind returns Jenkins object kind
 func (in *Jenkins) GetObjectKind() schema.ObjectKind { return in }
