@@ -6,12 +6,11 @@ import (
 	"regexp"
 	"strings"
 
+	docker "github.com/docker/distribution/reference"
 	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
 	"github.com/jenkinsci/kubernetes-operator/pkg/plugins"
-
-	docker "github.com/docker/distribution/reference"
 	stackerr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -277,7 +276,7 @@ func (r *JenkinsReconcilerBaseConfiguration) validateJenkinsMasterPodEnvs() []st
 		if userEnv.Name == constants.JavaOpsVariableName {
 			javaOpts = userEnv
 		}
-		//if _, overriding := baseEnvNames[userEnv.Name]; overriding {
+		// if _, overriding := baseEnvNames[userEnv.Name]; overriding {
 		//	messages = append(messages, fmt.Sprintf("Jenkins Master container env '%s' cannot be overridden", userEnv.Name))
 		//}
 	}
@@ -384,6 +383,7 @@ func (r *JenkinsReconcilerBaseConfiguration) validateConfiguration(configuration
 	for index, configMapRef := range configuration.Configurations {
 		if len(configMapRef.Name) == 0 {
 			messages = append(messages, fmt.Sprintf("%s.configurations[%d] name is empty", name, index))
+
 			continue
 		}
 

@@ -49,7 +49,7 @@ GOCACHE := $(shell pwd)/build/_output/gocache
 golangci: install-golangci
 	GOLANGCI_LINT_CACHE=$(GOLANGCI_LINT_CACHE) XDG_CACHE_HOME=$(XDG_CACHE_HOME) GOCACHE=$(GOCACHE) $(GOBIN)/golangci-lint run
 goimports: install-goimports
-	@$(GOBIN)/goimports -w -l -e $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+	@goimports -w -l -e $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 generate: controller-gen ## Generate code
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."

@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
-
 	stackerr "github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,6 +65,7 @@ func (r *JenkinsReconcilerBaseConfiguration) ensureExtraRBAC(meta metav1.ObjectM
 			name = getExtraRoleBindingName(meta.Name, roleRef)
 			if roleBinding.Name == name {
 				found = true
+
 				continue
 			}
 		}

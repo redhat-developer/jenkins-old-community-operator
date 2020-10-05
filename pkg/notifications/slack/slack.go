@@ -147,5 +147,6 @@ func (s Slack) Send(e event.Event) error {
 	}
 
 	defer func() { _ = resp.Body.Close() }()
+
 	return nil
 }

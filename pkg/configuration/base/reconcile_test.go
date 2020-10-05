@@ -665,9 +665,10 @@ func TestEnsureExtraRBAC(t *testing.T) {
 			},
 			Spec: v1alpha2.JenkinsSpec{
 				Roles: []rbacv1.RoleRef{
-					{APIGroup: "rbac.authorization.k8s.io",
-						Kind: clusterRoleKind,
-						Name: "edit",
+					{
+						APIGroup: "rbac.authorization.k8s.io",
+						Kind:     clusterRoleKind,
+						Name:     "edit",
 					},
 				},
 			},

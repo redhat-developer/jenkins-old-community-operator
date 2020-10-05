@@ -19,41 +19,35 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
-
-	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base"
-	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
-	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
-	"github.com/jenkinsci/kubernetes-operator/pkg/plugins"
-	routev1 "github.com/openshift/api/route/v1"
-	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	//	"math/rand"
 	"reflect"
 	"strings"
-
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/jenkinsci/kubernetes-operator/pkg/log"
-	appsv1 "k8s.io/api/apps/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-
-	//"time"
+	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	jenkinsclient "github.com/jenkinsci/kubernetes-operator/pkg/client"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration"
+	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base"
+	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
+	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
+	"github.com/jenkinsci/kubernetes-operator/pkg/log"
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications/event"
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications/reason"
+	"github.com/jenkinsci/kubernetes-operator/pkg/plugins"
+	routev1 "github.com/openshift/api/route/v1"
+	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	//	"math/rand"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -126,6 +120,7 @@ func (r *JenkinsReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error)
 
 	if err != nil && apierrors.IsConflict(err) {
 		logger.V(log.VWarn).Info(fmt.Sprintf("Reconcile loop failed 1#: %+v", err))
+
 		return ctrl.Result{Requeue: true}, nil
 	} else if err != nil {
 		logger.V(log.VWarn).Info(fmt.Sprintf("Reconcile loop failed 2#: %+v", err))
@@ -163,6 +158,7 @@ func (r *JenkinsReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error)
 		logger.V(log.VWarn).Info(fmt.Sprintf("Requeing: !!! Reconcile loop failed: %+v", err))
 		return ctrl.Result{Requeue: false}, nil
 	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -247,7 +243,7 @@ func (r *JenkinsReconciler) reconcile(ctx context.Context, request ctrl.Request,
 		time := jenkins.Status.BaseConfigurationCompletedTime.Sub(jenkins.Status.ProvisionStartTime.Time)
 		message := fmt.Sprintf("Base configuration phase is complete, took %s", time)
 		r.sendNewBaseConfigurationCompleteNotification(jenkins, message)
-		//logger.V(log.VWarn).Info(fmt.Sprintf("Comparing old and new status: %+v\n\n%+v", status, jenkins.Status))
+		// logger.V(log.VWarn).Info(fmt.Sprintf("Comparing old and new status: %+v\n\n%+v", status, jenkins.Status))
 		err = r.Status().Update(ctx, jenkins)
 		if err != nil {
 			logger.Error(err, "Failed to update Jenkins status")
@@ -371,7 +367,7 @@ func (r *JenkinsReconciler) setDefaults(jenkins *v1alpha2.Jenkins) (requeue bool
 	if reflect.DeepEqual(jenkins.Spec.Service, v1alpha2.Service{}) {
 		logger.Info("Setting default Jenkins master service")
 		changed = true
-		var serviceType = corev1.ServiceTypeClusterIP
+		serviceType := corev1.ServiceTypeClusterIP
 		if r.jenkinsAPIConnectionSettings.UseNodePort {
 			serviceType = corev1.ServiceTypeNodePort
 		}
@@ -470,6 +466,7 @@ func (r *JenkinsReconciler) setDefaultsForContainer(jenkins *v1alpha2.Jenkins, c
 func isResourceRequirementsNotSet(requirements corev1.ResourceRequirements) bool {
 	return reflect.DeepEqual(requirements, corev1.ResourceRequirements{})
 }
+
 func basePlugins() (result []v1alpha2.Plugin) {
 	for _, value := range plugins.BasePlugins() {
 		result = append(result, v1alpha2.Plugin{Name: value.Name, Version: value.Version})

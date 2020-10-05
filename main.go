@@ -22,11 +22,14 @@ import (
 	"os"
 	currentruntime "runtime"
 
+	jenkinsv1alpha2 "github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
+	"github.com/jenkinsci/kubernetes-operator/controllers"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
 	"github.com/jenkinsci/kubernetes-operator/pkg/event"
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications"
 	e "github.com/jenkinsci/kubernetes-operator/pkg/notifications/event"
+	"github.com/jenkinsci/kubernetes-operator/version"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
@@ -35,22 +38,15 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	jenkinsv1alpha2 "github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
-	"github.com/jenkinsci/kubernetes-operator/controllers"
-	"github.com/jenkinsci/kubernetes-operator/version"
-
-	//sdkVersion "github.com/operator-framework/operator-sdk/version"
-
+	// sdkVersion "github.com/operator-framework/operator-sdk/version"
 	kzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	// +kubebuilder:scaffold:imports
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
@@ -106,6 +102,7 @@ func getKubernetesClientSet(restClient *rest.Config, debug *bool) *kubernetes.Cl
 	if err != nil {
 		fatal(errors.Wrap(err, "failed to create Kubernetes client set"), *debug)
 	}
+
 	return clientSet
 }
 
@@ -114,6 +111,7 @@ func getEventsRecorder(cfg *rest.Config, debug *bool) event.Recorder {
 	if err != nil {
 		fatal(errors.Wrap(err, "failed to create manager"), *debug)
 	}
+
 	return events
 }
 
@@ -123,6 +121,7 @@ func getRestClient(debug *bool) *rest.Config {
 	if err != nil {
 		fatal(errors.Wrap(err, "failed to get config"), *debug)
 	}
+
 	return cfg
 }
 
@@ -142,6 +141,7 @@ func initManager(metricsAddr string, enableLeaderElection bool) manager.Manager 
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+
 	return mgr
 }
 
@@ -167,6 +167,7 @@ func startManager(metricsAddr string, enableLeaderElection bool) (manager.Manage
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+
 	return mgr, err
 }
 
@@ -200,6 +201,7 @@ func newJenkinsImageRenconciler(mgr manager.Manager) *controllers.JenkinsImageRe
 		Scheme: mgr.GetScheme(),
 	}
 }
+
 func fatal(err error, debug bool) {
 	if debug {
 		setupLog.Error(nil, fmt.Sprintf("%+v", err))

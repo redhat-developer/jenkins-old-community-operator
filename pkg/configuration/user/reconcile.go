@@ -7,7 +7,6 @@ import (
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/backuprestore"
 	"github.com/jenkinsci/kubernetes-operator/pkg/log"
-
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 

@@ -31,6 +31,7 @@ func Listen(events chan event.Event, k8sEvent k8sevent.Recorder, k8sClient k8scl
 
 		if !e.Reason.HasMessages() {
 			logger.V(log.VWarn).Info("Reason has no messages, this should not happen")
+
 			continue // skip empty messages
 		}
 
@@ -54,6 +55,7 @@ func Listen(events chan event.Event, k8sEvent k8sevent.Recorder, k8sClient k8scl
 				provider = smtp.New(k8sClient, notificationConfig)
 			default:
 				logger.V(log.VWarn).Info(fmt.Sprintf("Unknown notification service `%+v`", notificationConfig))
+
 				continue
 			}
 

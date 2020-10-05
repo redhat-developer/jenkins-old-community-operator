@@ -111,6 +111,7 @@ func (o *CopyOptions) Run(args []string) error {
 		if _, err := os.Stat(args[0]); err == nil {
 			return o.copyToPod(fileSpec{File: args[0]}, destSpec, &exec.ExecOptions{})
 		}
+
 		return fmt.Errorf("src doesn't exist in local filesystem")
 	}
 
@@ -120,6 +121,7 @@ func (o *CopyOptions) Run(args []string) error {
 	if len(destSpec.PodName) != 0 {
 		return o.copyToPod(srcSpec, destSpec, &exec.ExecOptions{})
 	}
+
 	return fmt.Errorf("one of src or dest must be a remote file specification")
 }
 
@@ -196,6 +198,7 @@ func (o *CopyOptions) copyToPod(src, dest fileSpec, options *exec.ExecOptions) e
 
 	options.Command = cmdArr
 	options.Executor = &exec.DefaultRemoteExecutor{}
+
 	return o.execute(options)
 }
 
@@ -232,6 +235,7 @@ func (o *CopyOptions) copyFromPod(src, dest fileSpec) error {
 	// remove extraneous path shortcuts - these could occur if a path contained extra "../"
 	// and attempted to navigate beyond "/" in a remote filesystem
 	prefix = stripPathShortcuts(prefix)
+
 	return o.untarAll(src, reader, dest.File, prefix)
 }
 
@@ -264,6 +268,7 @@ func makeTar(srcPath, destPath string, writer io.Writer) error {
 
 	srcPath = path.Clean(srcPath)
 	destPath = path.Clean(destPath)
+
 	return recursiveTar(path.Dir(srcPath), path.Base(srcPath), path.Dir(destPath), path.Base(destPath), tarWriter)
 }
 
@@ -296,6 +301,7 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 					return err
 				}
 			}
+
 			return nil
 		} else if stat.Mode()&os.ModeSymlink != 0 {
 			// case soft link
@@ -331,9 +337,11 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 			if _, err := io.Copy(tw, f); err != nil {
 				return err
 			}
+
 			return f.Close()
 		}
 	}
+
 	return nil
 }
 
@@ -347,6 +355,7 @@ func (o *CopyOptions) untarAll(src fileSpec, reader io.Reader, destDir, prefix s
 			if err != io.EOF {
 				return err
 			}
+
 			break
 		}
 
@@ -415,6 +424,7 @@ func isDestRelative(base, dest string) bool {
 	if err != nil {
 		return false
 	}
+
 	return relative == "." || relative == stripPathShortcuts(relative)
 }
 
@@ -438,5 +448,6 @@ func (o *CopyOptions) execute(options *exec.ExecOptions) error {
 	if err := options.Run(); err != nil {
 		return err
 	}
+
 	return nil
 }

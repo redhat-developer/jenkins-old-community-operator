@@ -41,7 +41,7 @@ const (
 	httpPortName = "http"
 	jnlpPortName = "jnlp"
 
-	//defaut configmap for jenkins configuration
+	// defaut configmap for jenkins configuration
 	JenkinsDefaultConfigMapName = "jenkins-default-configuration"
 
 	// JenkinsSCConfigName is the Jenkins side car container name for reloading config
@@ -495,7 +495,7 @@ func isPodRunning(k8sClient client.Client, podName, namespace string) wait.Condi
 		switch pod.Status.Phase {
 		case corev1.PodRunning:
 			return true, nil
-		case corev1.PodFailed, corev1.PodSucceeded:
+		case corev1.PodFailed, corev1.PodSucceeded, corev1.PodPending, corev1.PodUnknown:
 			return false, conditions.ErrPodCompleted
 		}
 		return false, nil

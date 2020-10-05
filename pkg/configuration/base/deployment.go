@@ -9,14 +9,13 @@ import (
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications/event"
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications/reason"
 	"github.com/jenkinsci/kubernetes-operator/version"
-
 	stackerr "github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func (r *JenkinsReconcilerBaseConfiguration) ensureJenkinsDeploymentIsReady(request ctrl.Request) (ctrl.Result, error) {
+func (r *JenkinsReconcilerBaseConfiguration) ensureJenkinsDeploymentIsReady() (ctrl.Result, error) {
 	jenkinsDeployment, err := r.GetJenkinsDeployment()
 	deploymentName := jenkinsDeployment.Name
 	if err != nil {
@@ -30,12 +29,10 @@ func (r *JenkinsReconcilerBaseConfiguration) ensureJenkinsDeploymentIsReady(requ
 	}
 	status.ProvisionStartTime = &jenkinsDeployment.CreationTimestamp
 	r.logger.Info(fmt.Sprintf("Deployment %s exist and has availableReplicas...updating phase and completion time", deploymentName))
-	//if status.Phase == constants.JenkinsStatusReinitializing {
 	now := metav1.Now()
 	status.Phase = constants.JenkinsStatusCompleted
 	status.BaseConfigurationCompletedTime = &now
 	r.logger.Info("Jenkins BaseConfiguration Completed after reinitialization")
-	//}
 	return ctrl.Result{}, nil
 }
 

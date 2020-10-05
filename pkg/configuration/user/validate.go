@@ -9,5 +9,6 @@ import (
 func (r *reconcileUserConfiguration) Validate(jenkins *v1alpha2.Jenkins) ([]string, error) {
 	backupAndRestore := backuprestore.New(r.Configuration, r.logger)
 	msg := backupAndRestore.Validate()
+
 	return msg, nil
 }

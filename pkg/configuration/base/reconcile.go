@@ -5,9 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"strings"
-
 	"reflect"
+	"strings"
 
 	"github.com/go-logr/logr"
 	jenkinsclient "github.com/jenkinsci/kubernetes-operator/pkg/client"
@@ -59,7 +58,7 @@ func (r *JenkinsReconcilerBaseConfiguration) Reconcile(request reconcile.Request
 	}
 	r.logger.V(log.VDebug).Info(fmt.Sprintf("Jenkins Deployment is present: Requeue result is: %+v", result.Requeue))
 	r.logger.V(log.VDebug).Info("Ensuring that Deployment is ready")
-	result, err = r.ensureJenkinsDeploymentIsReady(request)
+	result, err = r.ensureJenkinsDeploymentIsReady()
 	if err != nil {
 		r.logger.V(log.VDebug).Info(fmt.Sprintf("Error when ensuring that Deployment is ready %s", err))
 		return reconcile.Result{}, nil, err

@@ -73,6 +73,7 @@ func validatePlugin(name, version, downloadURL string) error {
 			return errors.Errorf("invalid download URL '%s' for plugin name %s:%s, must follow pattern '%s'", downloadURL, name, version, DownloadURLPattern.String())
 		}
 	}
+
 	return nil
 }
 

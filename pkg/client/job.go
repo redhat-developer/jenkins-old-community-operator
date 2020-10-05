@@ -25,5 +25,6 @@ func (jenkins *jenkins) GetBuild(jobName string, number int64) (*gojenkins.Build
 	if err != nil {
 		return nil, err
 	}
+
 	return build, nil
 }

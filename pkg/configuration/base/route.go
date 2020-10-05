@@ -5,14 +5,13 @@ import (
 	"fmt"
 
 	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	routev1 "github.com/openshift/api/route/v1"
 	stackerr "github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // createRoute takes the ServiceName and Creates the Route based on it

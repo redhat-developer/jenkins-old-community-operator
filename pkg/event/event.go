@@ -63,6 +63,7 @@ func initializeEventRecorder(config *rest.Config, component string) (record.Even
 		scheme.Scheme,
 		v1.EventSource{Component: component},
 	)
+
 	return eventRecorder, nil
 }
 

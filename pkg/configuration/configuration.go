@@ -12,7 +12,6 @@ import (
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	"github.com/jenkinsci/kubernetes-operator/pkg/log"
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications/event"
-
 	stackerr "github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,6 +60,7 @@ func (c *Configuration) GetJenkinsDeployment() (*appsv1.Deployment, error) {
 		logger.V(log.VDebug).Info(fmt.Sprintf("No deployment named: %s found: %+v", deploymentName, err))
 		return nil, err
 	}
+
 	return jenkinsDeployment, nil
 }
 
@@ -158,6 +157,7 @@ func (c *Configuration) GetJenkinsMasterContainer() *v1alpha2.Container {
 		// the first container is the Jenkins master, it is forced jenkins_controller.go
 		return &c.Jenkins.Spec.Master.Containers[0]
 	}
+
 	return nil
 }
 

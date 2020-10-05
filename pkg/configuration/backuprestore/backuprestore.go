@@ -38,6 +38,7 @@ func (t *backupTriggers) stop(logger logr.Logger, namespace string, name string)
 
 func (t *backupTriggers) get(namespace, name string) (backupTrigger, bool) {
 	trigger, found := t.triggers[t.key(namespace, name)]
+
 	return trigger, found
 }
 
@@ -113,10 +114,12 @@ func (bar *BackupAndRestore) Restore(jenkinsClient jenkinsclient.Jenkins) error 
 	jenkins := bar.Configuration.Jenkins
 	if len(jenkins.Spec.Restore.ContainerName) == 0 || jenkins.Spec.Restore.Action.Exec == nil {
 		bar.logger.V(log.VDebug).Info("Skipping restore backup, backup restore not configured")
+
 		return nil
 	}
 	if jenkins.Status.RestoredBackup != 0 {
 		bar.logger.V(log.VDebug).Info("Skipping restore backup, backup already restored")
+
 		return nil
 	}
 	if jenkins.Status.LastBackup == 0 {
@@ -236,7 +239,7 @@ func (bar *BackupAndRestore) StopBackupTrigger() {
 	triggers.stop(bar.logger, bar.Configuration.Jenkins.Namespace, bar.Configuration.Jenkins.Name)
 }
 
-//IsBackupTriggerEnabled returns true if the backup trigger is enabled
+// IsBackupTriggerEnabled returns true if the backup trigger is enabled
 func (bar *BackupAndRestore) IsBackupTriggerEnabled() bool {
 	_, enabled := triggers.get(bar.Configuration.Jenkins.Namespace, bar.Configuration.Jenkins.Name)
 	return enabled
