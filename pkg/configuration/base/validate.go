@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/jenkinsci/kubernetes-operator/pkg/apis/jenkins/v1alpha2"
+	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	"github.com/jenkinsci/kubernetes-operator/pkg/configuration/base/resources"
 	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
 	"github.com/jenkinsci/kubernetes-operator/pkg/plugins"
@@ -18,12 +18,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var (
-	dockerImageRegexp = regexp.MustCompile(`^` + docker.TagRegexp.String() + `$`)
-)
+var dockerImageRegexp = regexp.MustCompile(`^` + docker.TagRegexp.String() + `$`)
 
 // Validate validates Jenkins CR Spec.master section
-func (r *ReconcileJenkinsBaseConfiguration) Validate(jenkins *v1alpha2.Jenkins) ([]string, error) {
+func (r *JenkinsReconcilerBaseConfiguration) Validate(jenkins *v1alpha2.Jenkins) ([]string, error) {
 	var messages []string
 
 	if msg := r.validateReservedVolumes(); len(msg) > 0 {
@@ -59,7 +57,7 @@ func (r *ReconcileJenkinsBaseConfiguration) Validate(jenkins *v1alpha2.Jenkins) 
 	return messages, nil
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validateJenkinsMasterContainerCommand() []string {
+func (r *JenkinsReconcilerBaseConfiguration) validateJenkinsMasterContainerCommand() []string {
 	masterContainer := r.Configuration.GetJenkinsMasterContainer()
 	if masterContainer == nil {
 		return []string{}
@@ -91,7 +89,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateJenkinsMasterContainerComman
 	return []string{}
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validateImagePullSecrets() ([]string, error) {
+func (r *JenkinsReconcilerBaseConfiguration) validateImagePullSecrets() ([]string, error) {
 	var messages []string
 	for _, sr := range r.Configuration.Jenkins.Spec.Master.ImagePullSecrets {
 		msg, err := r.validateImagePullSecret(sr.Name)
@@ -105,7 +103,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateImagePullSecrets() ([]string
 	return messages, nil
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validateImagePullSecret(secretName string) ([]string, error) {
+func (r *JenkinsReconcilerBaseConfiguration) validateImagePullSecret(secretName string) ([]string, error) {
 	var messages []string
 	secret := &corev1.Secret{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: r.Configuration.Jenkins.ObjectMeta.Namespace}, secret)
@@ -131,7 +129,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateImagePullSecret(secretName s
 	return messages, nil
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validateVolumes() ([]string, error) {
+func (r *JenkinsReconcilerBaseConfiguration) validateVolumes() ([]string, error) {
 	var messages []string
 	for _, volume := range r.Configuration.Jenkins.Spec.Master.Volumes {
 		switch {
@@ -159,7 +157,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateVolumes() ([]string, error) 
 	return messages, nil
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validatePersistentVolumeClaim(volume corev1.Volume) ([]string, error) {
+func (r *JenkinsReconcilerBaseConfiguration) validatePersistentVolumeClaim(volume corev1.Volume) ([]string, error) {
 	var messages []string
 
 	pvc := &corev1.PersistentVolumeClaim{}
@@ -173,7 +171,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validatePersistentVolumeClaim(volume
 	return messages, nil
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validateConfigMapVolume(volume corev1.Volume) ([]string, error) {
+func (r *JenkinsReconcilerBaseConfiguration) validateConfigMapVolume(volume corev1.Volume) ([]string, error) {
 	var messages []string
 	if volume.ConfigMap.Optional != nil && *volume.ConfigMap.Optional {
 		return nil, nil
@@ -190,7 +188,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateConfigMapVolume(volume corev
 	return messages, nil
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validateSecretVolume(volume corev1.Volume) ([]string, error) {
+func (r *JenkinsReconcilerBaseConfiguration) validateSecretVolume(volume corev1.Volume) ([]string, error) {
 	var messages []string
 	if volume.Secret.Optional != nil && *volume.Secret.Optional {
 		return nil, nil
@@ -207,7 +205,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateSecretVolume(volume corev1.V
 	return messages, nil
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validateReservedVolumes() []string {
+func (r *JenkinsReconcilerBaseConfiguration) validateReservedVolumes() []string {
 	var messages []string
 
 	for _, baseVolume := range resources.GetJenkinsMasterPodBaseVolumes(r.Configuration.Jenkins) {
@@ -221,7 +219,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateReservedVolumes() []string {
 	return messages
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validateContainer(container v1alpha2.Container) []string {
+func (r *JenkinsReconcilerBaseConfiguration) validateContainer(container v1alpha2.Container) []string {
 	var messages []string
 	if container.Image == "" {
 		messages = append(messages, "Image not set")
@@ -242,7 +240,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateContainer(container v1alpha2
 	return messages
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validateContainerVolumeMounts(container v1alpha2.Container) []string {
+func (r *JenkinsReconcilerBaseConfiguration) validateContainerVolumeMounts(container v1alpha2.Container) []string {
 	var messages []string
 	allVolumes := append(resources.GetJenkinsMasterPodBaseVolumes(r.Configuration.Jenkins), r.Configuration.Jenkins.Spec.Master.Volumes...)
 
@@ -266,7 +264,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateContainerVolumeMounts(contai
 	return messages
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validateJenkinsMasterPodEnvs() []string {
+func (r *JenkinsReconcilerBaseConfiguration) validateJenkinsMasterPodEnvs() []string {
 	var messages []string
 	baseEnvs := resources.GetJenkinsMasterContainerBaseEnvs(r.Configuration.Jenkins)
 	baseEnvNames := map[string]string{}
@@ -292,6 +290,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateJenkinsMasterPodEnvs() []str
 		for requiredFlag := range requiredFlags {
 			if setFlag == requiredFlag {
 				requiredFlags[requiredFlag] = true
+
 				break
 			}
 		}
@@ -305,7 +304,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validateJenkinsMasterPodEnvs() []str
 	return messages
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) validatePlugins(requiredBasePlugins []plugins.Plugin, basePlugins, userPlugins []v1alpha2.Plugin) []string {
+func (r *JenkinsReconcilerBaseConfiguration) validatePlugins(requiredBasePlugins []plugins.Plugin, basePlugins, userPlugins []v1alpha2.Plugin) []string {
 	var messages []string
 	allPlugins := map[plugins.Plugin][]plugins.Plugin{}
 
@@ -342,7 +341,7 @@ func (r *ReconcileJenkinsBaseConfiguration) validatePlugins(requiredBasePlugins 
 	return messages
 }
 
-func (r *ReconcileJenkinsBaseConfiguration) verifyBasePlugins(requiredBasePlugins []plugins.Plugin, basePlugins []v1alpha2.Plugin) []string {
+func (r *JenkinsReconcilerBaseConfiguration) verifyBasePlugins(requiredBasePlugins []plugins.Plugin, basePlugins []v1alpha2.Plugin) []string {
 	var messages []string
 
 	for _, requiredBasePlugin := range requiredBasePlugins {
@@ -350,6 +349,7 @@ func (r *ReconcileJenkinsBaseConfiguration) verifyBasePlugins(requiredBasePlugin
 		for _, basePlugin := range basePlugins {
 			if requiredBasePlugin.Name == basePlugin.Name {
 				found = true
+
 				break
 			}
 		}
@@ -362,7 +362,7 @@ func (r *ReconcileJenkinsBaseConfiguration) verifyBasePlugins(requiredBasePlugin
 }
 
 //nolint:unparam
-func (r *ReconcileJenkinsBaseConfiguration) validateConfiguration(configuration v1alpha2.Configuration, name string) ([]string, error) {
+func (r *JenkinsReconcilerBaseConfiguration) validateConfiguration(configuration v1alpha2.Configuration, name string) ([]string, error) {
 	var messages []string
 	if len(configuration.Secret.Name) == 0 && len(configuration.Configurations) == 0 {
 		return nil, nil
