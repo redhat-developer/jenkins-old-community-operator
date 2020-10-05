@@ -9,7 +9,9 @@ ENV LANG=en_US.utf8
 
 # Go
 ENV GOPATH=/tmp/go
+ENV GOBIN=/tmp/go/bin
 ENV GOROOT=/tmp/goroot/go
+ENV GOCACHE=/tmp/go/.cache 
 ENV GO_VERSION=1.14.1
 ENV GO_DOWNLOAD_SITE=https://dl.google.com/go/
 ENV GO_DIST=go$GO_VERSION.linux-amd64.tar.gz
