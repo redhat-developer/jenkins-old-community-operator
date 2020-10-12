@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	routev1 "github.com/openshift/api/route/v1"
 	"reflect"
 	"strings"
 	"time"
@@ -89,14 +90,15 @@ type reconcileError struct {
 var reconcileErrors = map[string]reconcileError{}
 
 func (r *JenkinsReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	owns := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha2.Jenkins{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
-		Owns(&appsv1.Deployment{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Complete(r)
-	// Owns(&routev1.Route{}).Complete(r)
+		Owns(&appsv1.Deployment{})
+	if resources.IsImageRegistryAvailable(r.Client) {
+		owns.Owns(&routev1.Route{})
+	}
+	return owns.WithEventFilter(predicate.GenerationChangedPredicate{}).Complete(r)
 }
 
 // +kubebuilder:rbac:groups=jenkins.io,resources=jenkins,verbs=get;list;watch;create;update;patch;delete
