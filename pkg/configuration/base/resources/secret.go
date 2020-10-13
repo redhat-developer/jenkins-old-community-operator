@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	logx "github.com/jenkinsci/kubernetes-operator/pkg/log"
@@ -31,7 +32,8 @@ var (
 
 const (
 	ServiceAccountNameAnnotation = "kubernetes.io/service-account.name"
-	BuilderServiceAccountName    = "builder"
+	BuilderServiceAccountName    = "default"
+	BuildSecretType              = "docker"
 )
 
 // GetDockerBuilderSecretName returns the *first* Docker secret used for pushing images into the openshift registry
@@ -44,7 +46,7 @@ func GetDockerBuilderSecretName(namespace string, clientSet client.Client) (stri
 		return "", err
 	}
 	for _, secret := range secrets.Items {
-		if secret.ObjectMeta.Annotations[ServiceAccountNameAnnotation] == BuilderServiceAccountName {
+		if strings.Contains(secret.Name, BuildSecretType) && secret.ObjectMeta.Annotations[ServiceAccountNameAnnotation] == BuilderServiceAccountName {
 			return secret.Name, nil
 		}
 	}

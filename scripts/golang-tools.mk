@@ -48,6 +48,41 @@ ifeq (, $(shell which kubebuilder))
 endif
 
 
+# find or download kubectl
+install-kubectl:
+ifeq (, $(shell which kubectl))
+	@{ \
+	set -e ; \
+	KUBECTL_TMP_DIR=$$(mktemp -d) ;\
+	cd $$KUBECTL_TMP_DIR ;\
+	curl -L https://dl.k8s.io/v1.19.3/kubernetes-client-$$GOOS-$$GOARCH.tar.gz  | tar -xvz -C $$KUBECTL_TMP_DIR ;\
+	ls -la ; \
+	mv kubernetes/client/bin/kubectl /usr/local/bin ;\
+	chmod +x /usr/local/bin/kubectl ;\
+	rm -fr $$KUBECTL_TMP_DIR ;\
+	}
+endif
+
+
+# find or download ginkgo
+install-ginkgo:
+ifeq (, $(shell which ginkgo))
+	@{ \
+	set -e ;\
+	GINKGO_TMP_DIR=$$(mktemp -d) ;\
+	cd $$GINKGO_TMP_DIR ;\
+	go mod init tmp ;\
+	go get github.com/onsi/ginkgo/ginkgo ;\
+	go get github.com/onsi/gomega/... ;\
+	rm -rf $$GINKGO_TMP_DIR ;\
+	}
+GINKGO=$(GOBIN)/ginkgo
+else
+GINKGO=$(shell which ginkgo)
+endif
+
+
+
 # find or download golangci
 install-golangci:
 ifeq (, $(shell which golangci-lint))

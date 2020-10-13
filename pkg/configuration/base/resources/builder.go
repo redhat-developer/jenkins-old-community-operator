@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"path"
 
 	jenkinsv1alpha2 "github.com/jenkinsci/kubernetes-operator/api/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
@@ -11,6 +12,8 @@ import (
 )
 
 const (
+	DockerCfgFilename            = ".dockercfg"
+	DockerConfigJSONFilename     = "config.json"
 	NameWithSuffixFormat         = "%s-%s"
 	PluginDefinitionFormat       = "%s:%s"
 	BuilderDockerfileArg         = "--dockerfile=/workspace/dockerfile/Dockerfile"
@@ -18,7 +21,9 @@ const (
 	BuilderNoPushArg             = "--no-push"
 	BuilderDestinationArg        = "--destination"
 	BuilderDigestFileArg         = "--image-name-with-digest-file=/dev/termination-log"
+	BuilderDirectorySecretPath   = "/kaniko/.docker/"
 	BuilderReproducibleArg       = "--reproducible"
+	BuilderSkipTLSVerify         = "--skip-tls-verify"
 	BuilderSuffix                = "builder"
 	DockerfileStorageSuffix      = "dockerfile-storage"
 	DockerSecretSuffix           = "docker-secret"
@@ -35,14 +40,17 @@ RUN chmod +x /tmp/install-plugins.sh
 RUN install-plugins.sh %s `
 )
 
-var log = logf.Log.WithName("controller_jenkinsimage")
+var (
+	log               = logf.Log.WithName("controller_jenkinsimage")
+	BuilderSecretPath = path.Join(BuilderDirectorySecretPath, DockerCfgFilename)
+)
 
 // NewBuilderPod returns a busybox pod with the same name/namespace as the cr.
 func NewBuilderPod(client client.Client, cr *jenkinsv1alpha2.JenkinsImage) *corev1.Pod {
 	logger := log.WithName("jenkinsimage_NewBuilderPod")
 	name := fmt.Sprintf(NameWithSuffixFormat, cr.Name, BuilderSuffix)
 	logger.Info(fmt.Sprintf("Creating a new builder pod with name %s", name))
-	builderPodArgs := []string{BuilderReproducibleArg, BuilderDockerfileArg, BuilderContextDirArg, BuilderDigestFileArg}
+	builderPodArgs := []string{BuilderReproducibleArg, BuilderSkipTLSVerify, BuilderDockerfileArg, BuilderContextDirArg, BuilderDigestFileArg}
 	//--no-push, or the destination specified in the CR, or the openshift default registry if we are on OpenShift
 	destinationArg := GetDestinationRepository(cr, client)
 	builderPodArgs = append(builderPodArgs, destinationArg)
@@ -80,6 +88,9 @@ func GetDestinationRepository(cr *jenkinsv1alpha2.JenkinsImage, clientSet client
 	spec := cr.Spec
 	destination := spec.To
 	repositoryArg := ""
+	if cr.Spec.NoOp {
+		return BuilderNoPushArg
+	}
 	if len(destination.Registry) == 0 {
 		if IsImageRegistryAvailable(clientSet) { // on OpenShift get the default registry
 			repositoryArg = fmt.Sprintf("%s=%s/%s/%s:%s", BuilderDestinationArg, DefaultImageRegistry, cr.Namespace, cr.Name, DefaultImageTag)
@@ -167,6 +178,12 @@ func getVolumes(instance *jenkinsv1alpha2.JenkinsImage, client client.Client) []
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: secretName,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  DockerCfgFilename,
+							Path: DockerConfigJSONFilename,
+						},
+					},
 				},
 			},
 		}
@@ -213,7 +230,7 @@ func getVolumesMounts(cr *jenkinsv1alpha2.JenkinsImage, client client.Client) []
 	pushSecretName, err := getPushSecretName(cr, client)
 	if len(pushSecretName) != 0 && err == nil {
 		name = fmt.Sprintf(NameWithSuffixFormat, cr.Name, DockerSecretSuffix)
-		mountPath = "/kaniko/.docker/"
+		mountPath = BuilderDirectorySecretPath
 		secret := corev1.VolumeMount{
 			Name:      name,
 			MountPath: mountPath,

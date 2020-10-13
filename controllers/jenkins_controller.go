@@ -19,10 +19,11 @@ package controllers
 import (
 	"context"
 	"fmt"
-	routev1 "github.com/openshift/api/route/v1"
 	"reflect"
 	"strings"
 	"time"
+
+	routev1 "github.com/openshift/api/route/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/jenkinsci/kubernetes-operator/api/v1alpha2"

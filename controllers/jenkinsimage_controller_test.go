@@ -18,7 +18,7 @@ import (
 const (
 	// Name                  = "test-image"
 	JenkinsImageName      = "test-jenkinsimage"
-	JenkinsImageNamespace = "default"
+	JenkinsImageNamespace = "test-jenkinsimage-namespace"
 	timeout               = time.Second * 30
 	interval              = time.Millisecond * 250
 	// duration = time.Second * 10
@@ -125,6 +125,7 @@ func GetJenkinsImageTestInstance(name string, namespace string) *v1alpha2.Jenkin
 			Namespace: namespace,
 		},
 		Spec: v1alpha2.JenkinsImageSpec{
+			NoOp: true,
 			Plugins: []v1alpha2.JenkinsPlugin{
 				{
 					Name:    "test",

@@ -13,6 +13,7 @@ type JenkinsImageSpec struct {
 	// DefaultUpdateCenter is a customer update center url from which all plugins will be downloaded.
 	// if not specified, https://updates.jenkins.io/ is used
 	DefaultUpdateCenter string `json:"defaultUpdateCenter,omitempty"`
+	NoOp                bool   `json:"noOp,omitempty"`
 }
 
 // Defines Jenkins Plugin structure

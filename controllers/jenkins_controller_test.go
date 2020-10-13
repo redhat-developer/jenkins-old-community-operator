@@ -21,7 +21,7 @@ import (
 const (
 	// Name                  = "test-image"
 	JenkinsName      = "test-jenkins"
-	JenkinsNamespace = "default"
+	JenkinsNamespace = "test-jenkins-namespace"
 )
 
 var _ = Describe("Jenkins controller", func() {

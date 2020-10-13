@@ -62,6 +62,8 @@ spec:
               required:
               - name
               type: object
+            noOp:
+              type: boolean
             plugins:
               description: Plugins list
               items:

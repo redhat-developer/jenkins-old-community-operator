@@ -4,7 +4,9 @@ include scripts/golang-tools.mk
 
 build: manager
 
-e2e: ## Run end-to-end (e2e) tests only
+e2e: install-ginkgo install-kubectl ## Run end-to-end (e2e) tests only
+	-kubectl create namespace test-jenkins-namespace 
+	-kubectl create namespace test-jenkinsimage-namespace
 	USE_EXISTING_CLUSTER=true ginkgo -v ./...
 
 test: kubebuilder generate manifests ## Run tests

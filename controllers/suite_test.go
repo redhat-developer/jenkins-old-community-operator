@@ -22,6 +22,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	routev1 "github.com/openshift/api/route/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
 	"github.com/jenkinsci/kubernetes-operator/pkg/constants"
 	"github.com/jenkinsci/kubernetes-operator/pkg/event"
 	"github.com/jenkinsci/kubernetes-operator/pkg/notifications"
@@ -50,11 +53,10 @@ var (
 	k8sClient  client.Client
 	testEnv    *envtest.Environment
 	logger     = ctrl.Log.WithName("suite_test.go")
-	)
-
+)
 
 const (
-	UseExistingCluster= "USE_EXISTING_CLUSTER"
+	UseExistingCluster = "USE_EXISTING_CLUSTER"
 )
 
 func TestAPIs(t *testing.T) {
@@ -66,9 +68,10 @@ var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	By("bootstrapping test environment")
 	runInCIValue := os.Getenv(UseExistingCluster)
-	useExistingCluster := len(runInCIValue) != 0 && ( runInCIValue== "true")
+	useExistingCluster := len(runInCIValue) != 0 && (runInCIValue == "true")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
+
+		CRDDirectoryPaths:  []string{filepath.Join("..", "config", "crd", "bases")},
 		UseExistingCluster: &useExistingCluster,
 	}
 
@@ -121,7 +124,7 @@ func registerJenkinsController(manager manager.Manager, c *rest.Config) {
 	eventsRecorder := getEventsRecorder(c)
 	client := manager.GetClient()
 	go notifications.Listen(notificationsChannel, eventsRecorder, client)
-	// utilruntime.Must(routev1.AddToScheme( manager.GetScheme()))
+	utilruntime.Must(routev1.AddToScheme(manager.GetScheme()))
 	controller := &JenkinsReconciler{
 		Client:             client,
 		Log:                ctrl.Log.WithName("controllers").WithName("JenkinsReconciler"),
