@@ -12,6 +12,25 @@ spec:
     authorizationStrategy: serviceAccount
   jenkinsImageRef: jenkinsimage-sample 
   master:
+    basePlugins:
+    - name: kubernetes
+      version: "1.25.2"
+    - name: workflow-job
+      version: "2.40"
+    - name: workflow-aggregator
+      version: "2.6"
+    - name: git
+      version: "4.2.2"
+    - name: job-dsl
+      version: "1.77"
+    - name: configuration-as-code
+      version: "1.41"
+    - name: configuration-as-code-groovy
+      version: "1.1"
+    - name: configuration-as-code-support
+      version: "1.19"
+    - name: kubernetes-credentials-provider
+      version: "0.12.1"
     containers:
     - name: jenkins-master
       image: jenkins/jenkins:lts
