@@ -24,9 +24,9 @@ spec:
       - name: KUBERNETES_TRUST_CERTIFICATES
         value: 'true'
       - name: JENKINS_SERVICE_NAME
-        value: jenkins-operator-http-jenkins
+        value: jenkins-jenkins
       - name: JNLP_SERVICE_NAME
-        value: jenkins-operator-jnlp-jenkins
+        value: jenkins-jenkins-jnlp
       - name: JENKINS_UC_INSECURE
         value: 'false'
       - name: JENKINS_HOME
