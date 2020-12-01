@@ -10,6 +10,7 @@ deploy/namespace-init.yaml
 # Temporary Build Files
 build/_output
 build/_test
+testbin/*
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 
 # Smoke test logs

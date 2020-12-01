@@ -90,10 +90,10 @@ var _ = BeforeSuite(func(done Done) {
 	manager, err := getManager()
 	Expect(err).ToNot(HaveOccurred())
 
-	registerJenkinsRestoreController(manager)
-	registerJenkinsBackupController(manager)
-	registerJenkinsImageController(manager)
 	registerJenkinsController(manager, restConfig)
+	registerJenkinsImageController(manager)
+	registerJenkinsBackupController(manager)
+	registerJenkinsRestoreController(manager)
 
 	go func() {
 		err = manager.Start(ctrl.SetupSignalHandler())
